@@ -1,0 +1,225 @@
+name: pebble-watchface
+version: 1
+description: Pebble watchface/app workflow - proposal → layout → specs → tasks
+
+artifacts:
+  - id: proposal
+    generates: proposal.md
+    description: Change proposal with platform targets and contest angle
+    template: proposal.md
+    instruction: |
+      Create the proposal document that establishes WHY this change is needed.
+
+      Sections:
+      - **Why**: 1-2 sentences on the problem or opportunity.
+      - **What Changes**: Bullet list of changes. Be specific about new capabilities,
+        modifications, or removals.
+      - **Platform Targets**: Which Pebble platforms this change affects:
+        - Time 2 (basalt-plus): 200x228 color e-paper
+        - Round 2 (gabbro): 260x260 circular color e-paper
+        - Both (preferred for contest submissions targeting team judging)
+      - **Quick View Impact**: Does this change affect Quick View (compact mode)?
+        State explicitly: "Quick View: affected / unaffected / new behavior".
+      - **Contest Angle**: Which judging categories does this strengthen?
+        - Most Hearts (community appeal, visual polish)
+        - Team Judging (creativity, cleverness, new platform use, design)
+        - Both
+      - **Capabilities**: Identify which specs will be created or modified:
+        - **New Capabilities**: Each becomes specs/<name>/spec.md. Use kebab-case.
+          Common categories: display-*, data-*, settings-*, alert-*, platform-*
+        - **Modified Capabilities**: Existing capabilities whose requirements change.
+          Check openspec/specs/ for existing spec names.
+      - **Impact**: Affected source files (typically src/c/main.c), JS config
+        files, appinfo.json, or resources/.
+
+      IMPORTANT: Research existing specs in openspec/specs/ before filling in
+      the Capabilities section. Each capability listed needs a corresponding spec.
+
+      Keep it to 1 page. Focus on the "why" - pixel coordinates belong in layout.md.
+    requires: []
+
+  - id: layout
+    generates: layout.md
+    description: Pixel-level layout spec - zones, fonts, frames, Quick View variant
+    template: layout.md
+    instruction: |
+      Create the layout document defining the exact screen composition for this
+      change on each target platform.
+
+      This is the primary design artifact for Pebble changes. It replaces the
+      generic design.md because Pebble development is fundamentally about
+      pixel coordinates, font choices, and zone math.
+
+      Sections:
+
+      **Platform Dimensions**
+      State the canvas size for each target platform:
+      - Time 2 (basalt-plus): 200 x 228 px, color e-paper, rectangular
+      - Round 2 (gabbro): 260 x 260 px, circular clip, color e-paper
+        Note for Round 2: corners are clipped by the circular bezel. Design
+        within the inscribed circle. Avoid placing important content in corners.
+      Create separate sub-sections if targeting both platforms.
+
+      **Zone Breakdown**
+      Define named vertical zones as a table: Zone | y | h | Purpose
+      Zones must be contiguous. Verify they sum to total screen height.
+      Standard zones: status-bar, hero, meta, separator, graph, footer.
+
+      **Layer Inventory**
+      Table of every layer involved in this change:
+      | Layer name | Type | Font | Frame (x,y,w,h) | Alignment | Default color |
+      List only layers that are new, moved, resized, or removed.
+      Mark removed layers with REMOVED.
+
+      **Font Reference**
+      List every font constant used, with its pixel height:
+      e.g., FONT_KEY_LECO_42_BOLD_NUMBERS (~54px), FONT_KEY_GOTHIC_28_BOLD (~28px),
+      FONT_KEY_GOTHIC_24_BOLD (~24px), FONT_KEY_GOTHIC_18_BOLD (~18px),
+      FONT_KEY_GOTHIC_14 (~14px).
+
+      **Color Palette**
+      List every GColor constant and its semantic meaning:
+      e.g., GColorGreen = glucose in normal range, GColorRed = urgent high/low.
+      Note: Time 2 is full color; Round 2 is also color (both new platforms support it).
+
+      **Quick View / Compact Mode**
+      Describe the compact layout (Quick View active):
+      - Which layers are hidden?
+      - Which layers reposition?
+      - Provide a zone table for compact mode if it differs significantly.
+
+      **ASCII Diagram**
+      Include a simple ASCII diagram showing zone boundaries for the final layout.
+      Verify: all y+h values are consistent, no unintended overlaps,
+      nothing exceeds screen bounds.
+
+      This document is the source of truth for tasks. Tasks should reference
+      specific values from this doc (e.g., "set frame to GRect(4, 82, 192, 24)
+      per layout.md meta row").
+    requires:
+      - proposal
+
+  - id: specs
+    generates: "specs/**/*.md"
+    description: Capability specifications defining what the watchface/app must do
+    template: spec.md
+    instruction: |
+      Create specification files defining WHAT the watchface/app must do.
+
+      Create one spec file per capability listed in the proposal's Capabilities section.
+      - New capabilities: specs/<capability>/spec.md
+      - Modified capabilities: use existing folder name from openspec/specs/
+
+      Common Pebble capability categories:
+      - **display-***: What the screen shows, when, and how it responds to data state.
+        Reference zone names and font names from layout.md.
+      - **data-***: How data is fetched, refreshed, cached, and aged. Specify
+        staleness thresholds (e.g., "data older than 15 min is considered stale").
+      - **settings-***: Clay/JS configuration options and their effect on display.
+      - **alert-***: Haptic/vibration behavior. Specify pattern:
+        short pulse, long pulse, double pulse, vibe_pattern array.
+      - **platform-***: Behavioral differences between Time 2 and Round 2.
+
+      Delta operations (## headers):
+      - **ADDED Requirements**: New capabilities
+      - **MODIFIED Requirements**: Changed behavior - MUST include full updated content
+      - **REMOVED Requirements**: Deprecated - MUST include Reason and Migration
+      - **RENAMED Requirements**: Name changes only - FROM:/TO: format
+
+      Format:
+      - Each requirement: `### Requirement: <name>` + description
+      - Use SHALL/MUST for normative requirements
+      - Each scenario: `#### Scenario: <name>` with WHEN/THEN format
+      - CRITICAL: Scenarios MUST use exactly 4 hashtags (####)
+      - Every requirement MUST have at least one scenario
+
+      MODIFIED workflow:
+      1. Find existing requirement in openspec/specs/<capability>/spec.md
+      2. Copy the ENTIRE requirement block
+      3. Paste under MODIFIED Requirements and edit
+      4. Header text must match exactly (whitespace-insensitive)
+
+      Each scenario is a potential emulator or on-device test case.
+    requires:
+      - layout
+
+  - id: tasks
+    generates: tasks.md
+    description: Checkbox implementation tasks grounded in layout.md and specs
+    template: tasks.md
+    instruction: |
+      Create the task list breaking down the implementation work.
+
+      IMPORTANT: The apply phase parses checkbox format. Tasks not using `- [ ]`
+      won't be tracked.
+
+      Standard task groups for Pebble C watchface changes:
+
+      ## 1. Constants and font setup
+      Update FONT_KEY_* constants, #define values for zone y-coordinates,
+      and any GRect frame constants. Reference layout.md for exact values.
+
+      ## 2. Layer declarations and creation
+      Declare new static layer pointers, create layers in window_load(),
+      set initial state, register update_procs for custom drawing layers.
+      Add to window layer with layer_add_child().
+
+      ## 3. Display logic
+      Update update_display() and draw callbacks. Include snprintf buffer
+      sizes (calculate: max digits + sign + units + null terminator).
+
+      ## 4. Layout function
+      Update prv_layout_for_bounds() for both normal and compact (Quick View)
+      branches. Verify all y values match layout.md zone breakdown.
+
+      ## 5. Layer cleanup
+      Update window_unload() to destroy all new layers. Destroy in reverse
+      creation order.
+
+      ## 6. Platform variant (if targeting both platforms)
+      Add conditional logic or #ifdef guards for Time 2 vs Round 2 if their
+      layouts differ.
+
+      ## 7. Build and verify
+      - [ ] N.1 `pebble build` passes with zero warnings, zero errors
+      - [ ] N.2 Emulator: Time 2 layout correct against layout.md ASCII diagram
+      - [ ] N.3 Emulator: Round 2 layout correct (if targeted)
+      - [ ] N.4 Quick View mode functions correctly
+      - [ ] N.5 Stale data state displays correctly (15+ min without update)
+      - [ ] N.6 Out-of-range alert triggers correctly
+
+      Each task should reference the specific layer or function being changed.
+    requires:
+      - specs
+      - layout
+
+apply:
+  requires: [tasks]
+  tracks: tasks.md
+  instruction: |
+    You are implementing a Pebble watchface/app change in C (PebbleOS SDK 4).
+
+    Before starting:
+    1. Read layout.md - source of truth for all pixel values and font choices
+    2. Read all spec files in the change's specs/ folder
+    3. Read src/c/main.c to understand current implementation
+    4. Read tasks.md and work through unchecked tasks in order
+
+    Pebble C implementation rules:
+    - All UI changes go in src/c/main.c unless proposal states otherwise
+    - Layer lifecycle: declare static → create in window_load → set initial state
+      → add to parent layer → destroy in window_unload (reverse order)
+    - Custom drawing layers: register layer_set_update_proc immediately after creation
+    - Buffer sizing: always calculate worst-case string length + null terminator
+    - Font constants: FONT_KEY_* prefix (e.g., FONT_KEY_LECO_42_BOLD_NUMBERS)
+    - GRect: GRect(x, y, width, height) where y=0 is top of screen
+    - GColor constants: GColorGreen, GColorRed, GColorChromeYellow, GColorOrange,
+      GColorWhite, GColorBlack, GColorLightGray, GColorDarkGray, GColorMintGreen
+    - Coordinate system: origin (0,0) is top-left; y increases downward
+
+    After each task:
+    - Mark complete: change `- [ ]` to `- [x]`
+    - Check for obvious compilation issues before moving to the next task
+    - Pause if a task requires a decision not covered by layout.md or specs
+
+    Do not add features beyond what is specified. Do not refactor unrelated code.

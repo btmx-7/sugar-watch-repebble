@@ -1,0 +1,78 @@
+schema: pebble-watchface
+
+context: |
+  This is a PebbleOS watchface written in C using the Pebble SDK 4.
+  The app is a CGM (Continuous Glucose Monitor) watchface called GlucoseGuard.
+
+  Source layout:
+  - src/c/main.c: all watchface UI, data handling, and display logic (single file)
+  - src/pkjs/app.js: JavaScript companion, fetches CGM data from phone
+  - src/pkjs/config.js: Clay configuration schema for settings
+  - appinfo.json: app metadata, capabilities, platform targets
+  - resources/: fonts and images
+
+  Target platforms:
+  - Time 2 (basalt-plus): 200x228 px, color e-paper, rectangular
+  - Round 2 (gabbro): 260x260 px, circular clip, color e-paper
+
+  Pebble SDK patterns used in this project:
+  - TextLayer for all text rendering
+  - Custom Layer with layer_set_update_proc for the sparkline graph and separator
+  - prv_layout_for_bounds() handles all frame calculations for both normal and
+    compact (Quick View) modes
+  - update_display() is the central function called whenever data or state changes
+  - Clay framework for in-app settings (via config.js)
+  - AppMessage for phone-to-watch data transfer (glucose readings)
+
+  Font system (used in this project):
+  - FONT_KEY_LECO_38_BOLD_NUMBERS / FONT_KEY_LECO_42_BOLD_NUMBERS: large numbers
+  - FONT_KEY_GOTHIC_28_BOLD: medium bold text
+  - FONT_KEY_GOTHIC_24_BOLD: secondary values
+  - FONT_KEY_GOTHIC_18_BOLD: labels
+  - FONT_KEY_GOTHIC_14: compact/small text
+
+  Glucose zone color scheme (do not change without a proposal):
+  - Normal range: GColorGreen
+  - Approaching limit: GColorChromeYellow
+  - Mildly out of range: GColorOrange
+  - Urgently out of range: GColorRed
+  - Stale / no data: GColorLightGray
+
+  Contest context:
+  - Spring 2026 Pebble App Contest runs April 2-19, 2026
+  - Team judging criteria: creativity, cleverness, good use of new platforms, design
+  - Key features judges want to see: Quick View support, Round 2 support
+  - April 12 deadline for phase 1 Most Hearts category
+
+rules: |
+  - All layout pixel values (GRect frames, y-coordinates, heights) must match
+    the layout.md document in the current change. Never invent coordinates.
+  - Never modify prv_layout_for_bounds() without updating BOTH the normal and
+    compact (Quick View) branches.
+  - Buffer size for snprintf: always calculate worst-case + null terminator.
+    Example: glucose value "-399 mg/dL" = 10 chars + null = 11 bytes minimum.
+  - Layer creation in window_load must be mirrored by destruction in window_unload.
+  - Do not add features beyond the current change's proposal and specs.
+  - pebble build must produce zero warnings. Treat all warnings as errors.
+
+  Battery efficiency (from pebble-watchface skill):
+  - NEVER use SECOND_UNIT for tick_timer_service_subscribe unless the user
+    explicitly requests per-second updates. Always use MINUTE_UNIT. Using
+    SECOND_UNIT forces a full redraw every second and drains the battery.
+
+  Screen dimensions (from pebble-watchface skill):
+  - NEVER hardcode screen dimensions (e.g., 200, 228). Always derive bounds
+    dynamically: GRect bounds = layer_get_bounds(window_get_root_layer(window)).
+    This ensures correct behavior on all platforms including Round 2 (260x260).
+    The layout.md pixel values are for design reference and verification only,
+    not for direct use as constants in C code.
+
+  Fixed-point math (from pebble-watchface skill):
+  - NEVER use floating-point arithmetic (float, double). PebbleOS has no FPU.
+    Use sin_lookup() / cos_lookup() for trigonometry (they return fixed-point
+    values scaled by TRIG_MAX_RATIO). Use integer arithmetic throughout.
+
+  GPath and resource management (from pebble-watchface skill):
+  - Pre-allocate GPaths in window_load, not dynamically during draw calls.
+  - AppMessage: register all callbacks (inbox_received, inbox_dropped,
+    outbox_failed, outbox_sent) before calling app_message_open().
