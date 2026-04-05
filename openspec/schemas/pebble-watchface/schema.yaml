@@ -1,6 +1,6 @@
 name: pebble-watchface
 version: 1
-description: Pebble watchface/app workflow - proposal → layout → specs → tasks
+description: Pebble watchface/app workflow - proposal → design (optional) → layout → specs → tasks
 
 artifacts:
   - id: proposal
@@ -38,6 +38,63 @@ artifacts:
       Keep it to 1 page. Focus on the "why" - pixel coordinates belong in layout.md.
     requires: []
 
+  - id: design
+    generates: design.md
+    optional: true
+    description: UX exploration and PenPot mockup - variants, decisions, selected layout
+    template: design.md
+    instruction: |
+      Create the design document that explores layout variants before committing to
+      pixel coordinates. This is an optional step for changes that need visual
+      exploration before writing layout.md.
+
+      Use the PenPot MCP to build actual mockups from the zone descriptions below.
+      The artifact is complete when one variant is selected and a PenPot link is recorded.
+
+      Sections:
+
+      **Benchmark References**
+      List 2-3 reference watchfaces or apps that inform the visual direction.
+      For each: name, what it does well, which principle to borrow.
+
+      **Layout Variants**
+      Define 2-3 named variants. For each:
+      - Who it is for (one sentence)
+      - Hero element (what dominates the screen)
+      - ASCII zone diagram using named zones
+      - Zone role table: Zone | Purpose | Key element
+
+      Zone naming conventions:
+      - status-bar: top strip (BT icon, battery, secondary info)
+      - hero: dominant content zone (30-50% of screen height)
+      - meta: secondary data row (delta, freshness, labels)
+      - separator: thin visual break (1-4px)
+      - graph: sparkline area
+      - footer: bottom strip (time, date)
+
+      **PenPot Mockup**
+      Use the PenPot MCP to build a frame for each variant:
+      - One page per platform (Time 2 / Round 2)
+      - Use the color system from config.yaml (green/yellow/orange/red/gray/white/black)
+      - Use the font hierarchy from config.yaml (LECO_42 for hero numbers, GOTHIC for labels)
+      - Represent layers as labeled rectangles if exact fonts are unavailable
+      - Record the PenPot board URL in this document under ## PenPot Link
+
+      **Decision**
+      State which variant is selected and why. This becomes the input to layout.md.
+      Format:
+      ```
+      Selected variant: <name>
+      Reason: <one sentence>
+      Deferred variants: <names> - <why not chosen>
+      ```
+
+      **Open Questions**
+      List any visual decisions left to PenPot exploration (battery style, icon size,
+      separator weight, etc.) with a note on who decides and when.
+    requires:
+      - proposal
+
   - id: layout
     generates: layout.md
     description: Pixel-level layout spec - zones, fonts, frames, Quick View variant
@@ -46,9 +103,11 @@ artifacts:
       Create the layout document defining the exact screen composition for this
       change on each target platform.
 
-      This is the primary design artifact for Pebble changes. It replaces the
-      generic design.md because Pebble development is fundamentally about
-      pixel coordinates, font choices, and zone math.
+      This is the primary design artifact for Pebble changes. Pebble development
+      is fundamentally about pixel coordinates, font choices, and zone math.
+
+      If design.md exists in this change, use the selected variant's zone breakdown
+      as the starting point. Pixel values here must be consistent with that choice.
 
       Sections:
 
@@ -98,6 +157,7 @@ artifacts:
       per layout.md meta row").
     requires:
       - proposal
+      - design  # optional; skip if design.md was not created
 
   - id: specs
     generates: "specs/**/*.md"
