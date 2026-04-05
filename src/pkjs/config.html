@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>GlucoseGuard Settings</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0d0d0d;
+      color: #fff;
+      padding: 0 0 40px 0;
+    }
+    .header {
+      background: linear-gradient(135deg, #00c853, #1b5e20);
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+    .header p {
+      font-size: 13px;
+      opacity: 0.8;
+      margin-top: 4px;
+    }
+    .section {
+      margin: 20px 16px 0;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #00c853;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+    .card {
+      background: #1a1a1a;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    .field {
+      display: flex;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .field:last-child { border-bottom: none; }
+    .field-label {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .field-hint {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-top: 2px;
+    }
+    input[type="text"], input[type="password"], input[type="number"], select {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 14px;
+      padding: 8px 12px;
+      width: 100%;
+      margin-top: 8px;
+      outline: none;
+    }
+    input:focus, select:focus {
+      border-color: #00c853;
+    }
+    .field-full {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .toggle {
+      position: relative;
+      width: 48px;
+      height: 28px;
+      flex-shrink: 0;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      inset: 0;
+      background: #3a3a3a;
+      border-radius: 28px;
+      transition: background 0.2s;
+    }
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 20px; width: 20px;
+      left: 4px; bottom: 4px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: #00c853; }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+    .threshold-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .threshold-row .field {
+      border-right: 1px solid #2a2a2a;
+    }
+    .threshold-row .field:last-child { border-right: none; }
+
+    .save-btn {
+      display: block;
+      width: calc(100% - 32px);
+      margin: 24px 16px 0;
+      padding: 16px;
+      background: #00c853;
+      color: #000;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      letter-spacing: 0.5px;
+    }
+    .save-btn:active { opacity: 0.8; }
+
+    .zone-preview {
+      display: flex;
+      gap: 6px;
+      margin: 12px 16px 0;
+      padding: 12px;
+      background: #1a1a1a;
+      border-radius: 12px;
+    }
+    .zone-chip {
+      flex: 1;
+      text-align: center;
+      padding: 6px 4px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    select option { background: #1a1a1a; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🩸 GlucoseGuard</h1>
+  <p>CGM Watchface Settings</p>
+</div>
+
+<div class="zone-preview">
+  <div class="zone-chip" style="background:#c62828; color:#fff">URGENT<br>LOW</div>
+  <div class="zone-chip" style="background:#e65100; color:#fff">LOW</div>
+  <div class="zone-chip" style="background:#1b5e20; color:#fff">IN<br>RANGE</div>
+  <div class="zone-chip" style="background:#f57f17; color:#000">HIGH</div>
+  <div class="zone-chip" style="background:#c62828; color:#fff">URGENT<br>HIGH</div>
+</div>
+
+<div class="section">
+  <div class="section-title">Data Source</div>
+  <div class="card">
+    <div class="field field-full">
+      <div class="field-label">Source
+        <span class="field-hint">Where to fetch your glucose data</span>
+      </div>
+      <select id="dataSource">
+        <option value="nightscout">Nightscout</option>
+        <option value="dexcom">Dexcom Share</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="section" id="nightscout-section">
+  <div class="section-title">Nightscout</div>
+  <div class="card">
+    <div class="field field-full">
+      <div class="field-label">Nightscout URL
+        <span class="field-hint">e.g. https://mysite.ns.io</span>
+      </div>
+      <input type="text" id="nsUrl" placeholder="https://yoursite.nightscout.io">
+    </div>
+    <div class="field field-full">
+      <div class="field-label">API Token (optional)
+        <span class="field-hint">Your Nightscout access token</span>
+      </div>
+      <input type="password" id="nsToken" placeholder="yourtoken-abc123">
+    </div>
+  </div>
+</div>
+
+<div class="section" id="dexcom-section" style="display:none">
+  <div class="section-title">Dexcom Share</div>
+  <div class="card">
+    <div class="field field-full">
+      <div class="field-label">Dexcom Username
+        <span class="field-hint">Your Dexcom account email</span>
+      </div>
+      <input type="text" id="dexcomUser" placeholder="you@example.com">
+    </div>
+    <div class="field field-full">
+      <div class="field-label">Dexcom Password</div>
+      <input type="password" id="dexcomPass" placeholder="••••••••">
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Display</div>
+  <div class="card">
+    <div class="field">
+      <div class="field-label">Use mmol/L
+        <span class="field-hint">Toggle for mmol/L (default: mg/dL)</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="useMmol">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+    <div class="field field-full">
+      <div class="field-label">Graph Window
+        <span class="field-hint">Hours of glucose history shown in graph</span>
+      </div>
+      <select id="graphWindow">
+        <option value="13">1 hour</option>
+        <option value="25">2 hours</option>
+        <option value="37">3 hours</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Alert Thresholds</div>
+  <div class="card">
+    <div class="threshold-row">
+      <div class="field field-full">
+        <div class="field-label">Low
+          <span class="field-hint">mg/dL (default 70)</span>
+        </div>
+        <input type="number" id="lowThresh" value="70" min="40" max="100">
+      </div>
+      <div class="field field-full">
+        <div class="field-label">High
+          <span class="field-hint">mg/dL (default 180)</span>
+        </div>
+        <input type="number" id="highThresh" value="180" min="120" max="300">
+      </div>
+    </div>
+    <div class="threshold-row">
+      <div class="field field-full">
+        <div class="field-label">Urgent Low
+          <span class="field-hint">Flash + 3× haptic</span>
+        </div>
+        <input type="number" id="urgentLow" value="55" min="40" max="80">
+      </div>
+      <div class="field field-full">
+        <div class="field-label">Urgent High
+          <span class="field-hint">Flash + 3× haptic</span>
+        </div>
+        <input type="number" id="urgentHigh" value="250" min="200" max="400">
+      </div>
+    </div>
+  </div>
+</div>
+
+<button class="save-btn" onclick="save()">Save & Apply</button>
+
+<script>
+  // ── Load params from URL ──
+  var params = {};
+  window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m, k, v) {
+    params[k] = decodeURIComponent(v);
+  });
+
+  document.getElementById('nsUrl').value      = params.nsUrl      || '';
+  document.getElementById('dexcomUser').value = params.dexcomUser || '';
+  document.getElementById('dataSource').value = params.dataSource || 'nightscout';
+  document.getElementById('useMmol').checked  = params.useMmol === '1';
+  document.getElementById('lowThresh').value  = params.lowThresh  || '70';
+  document.getElementById('highThresh').value = params.highThresh || '180';
+  document.getElementById('urgentLow').value   = params.urgentLow   || '55';
+  document.getElementById('urgentHigh').value  = params.urgentHigh  || '250';
+  document.getElementById('graphWindow').value = params.graphWindow || '37';
+
+  // ── Toggle source sections ──
+  document.getElementById('dataSource').addEventListener('change', function() {
+    var src = this.value;
+    document.getElementById('nightscout-section').style.display =
+      src === 'nightscout' ? 'block' : 'none';
+    document.getElementById('dexcom-section').style.display =
+      src === 'dexcom' ? 'block' : 'none';
+  });
+  document.getElementById('dataSource').dispatchEvent(new Event('change'));
+
+  function save() {
+    var data = {
+      nsUrl:       document.getElementById('nsUrl').value,
+      nsToken:     document.getElementById('nsToken').value,
+      dexcomUser:  document.getElementById('dexcomUser').value,
+      dexcomPass:  document.getElementById('dexcomPass').value,
+      dataSource:  document.getElementById('dataSource').value,
+      useMmol:     document.getElementById('useMmol').checked ? '1' : '0',
+      lowThresh:   document.getElementById('lowThresh').value,
+      highThresh:  document.getElementById('highThresh').value,
+      urgentLow:   document.getElementById('urgentLow').value,
+      urgentHigh:  document.getElementById('urgentHigh').value,
+      graphWindow: document.getElementById('graphWindow').value
+    };
+
+    var encoded = encodeURIComponent(JSON.stringify(data));
+
+    if (typeof Pebble !== 'undefined') {
+      // Running in Pebble config webview
+      document.location = 'pebblejs://close#' + encoded;
+    } else {
+      alert('Saved! (Preview mode — no watch connected)');
+    }
+  }
+</script>
+
+</body>
+</html>

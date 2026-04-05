@@ -1,0 +1,379 @@
+
+<style>
+  .dash { padding: 0 0 2rem; font-family: var(--font-sans); }
+  .top-banner { background: #0a1a0f; border-radius: var(--border-radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 1rem; border: 0.5px solid #1a3a20; }
+  .app-name { font-size: 22px; font-weight: 500; color: #4ade80; }
+  .app-sub { font-size: 13px; color: #86efac; margin-top: 2px; }
+  .prize-badge { margin-left: auto; background: #fef3c7; color: #92400e; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: var(--border-radius-md); }
+  .section-label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.8px; color: var(--color-text-secondary); margin: 0 0 0.75rem; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 1.5rem; }
+  .card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1rem 1.25rem; }
+  .card-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 0.5rem; }
+  .card-body { font-size: 14px; color: var(--color-text-primary); line-height: 1.6; }
+  .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+  .metric { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.875rem 1rem; }
+  .metric-label { font-size: 12px; color: var(--color-text-secondary); }
+  .metric-val { font-size: 22px; font-weight: 500; color: var(--color-text-primary); margin-top: 3px; }
+  .metric-val.green { color: #16a34a; }
+  .metric-val.amber { color: #d97706; }
+  .watch-frame { background: #000; border-radius: 18px; width: 140px; border: 3px solid #444; padding: 10px 8px; flex-shrink: 0; }
+  .watch-screen { background: #000; border-radius: 8px; overflow: hidden; }
+  .ws-status { display: flex; justify-content: space-between; padding: 3px 6px; }
+  .ws-bt { width: 10px; height: 10px; border-radius: 50%; background: #3b82f6; }
+  .ws-time { font-size: 10px; color: #fff; font-family: monospace; }
+  .ws-glucose { padding: 4px 6px 2px; }
+  .ws-val { font-size: 28px; font-weight: 700; font-family: monospace; }
+  .ws-val.in-range { color: #4ade80; }
+  .ws-val.low { color: #fb923c; }
+  .ws-val.high { color: #facc15; }
+  .ws-val.urgent { color: #f87171; }
+  .ws-arrow { font-size: 13px; color: #4ade80; margin-left: 4px; }
+  .ws-delta { font-size: 11px; color: #4ade80; padding: 0 6px 2px; }
+  .ws-zone { font-size: 9px; font-weight: 700; padding: 0 6px 3px; color: #4ade80; letter-spacing: 0.5px; }
+  .ws-graph { margin: 3px 6px; height: 34px; position: relative; background: #111; border-radius: 4px; overflow: hidden; }
+  .ws-stale { font-size: 8px; color: #9ca3af; padding: 2px 6px; text-align: center; }
+  .ws-date { font-size: 8px; color: #6b7280; padding: 1px 6px 4px; text-align: center; }
+  .zone-row { display: flex; gap: 6px; margin-bottom: 1.5rem; }
+  .zone-chip { flex: 1; padding: 8px 4px; text-align: center; border-radius: 6px; font-size: 10px; font-weight: 500; }
+  .judge-criteria { list-style: none; }
+  .judge-criteria li { display: flex; gap: 10px; padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); font-size: 14px; align-items: flex-start; }
+  .judge-criteria li:last-child { border-bottom: none; }
+  .check { color: #16a34a; font-size: 16px; flex-shrink: 0; }
+  .timeline { list-style: none; }
+  .timeline li { display: flex; gap: 12px; padding: 8px 0; font-size: 13px; align-items: flex-start; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+  .tl-dot.done { background: #16a34a; }
+  .tl-dot.todo { background: #9ca3af; }
+  .tl-dot.urgent { background: #d97706; }
+  .data-table { width: 100%; font-size: 13px; border-collapse: collapse; }
+  .data-table th { font-size: 11px; font-weight: 500; text-align: left; color: var(--color-text-secondary); padding: 6px 0; border-bottom: 0.5px solid var(--color-border-tertiary); }
+  .data-table td { padding: 8px 0; border-bottom: 0.5px solid var(--color-border-tertiary); vertical-align: top; }
+  .data-table tr:last-child td { border-bottom: none; }
+  .pill { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 500; }
+  .pill.must { background: #fee2e2; color: #991b1b; }
+  .pill.should { background: #fef9c3; color: #854d0e; }
+  .tabs { display: flex; gap: 0; border-bottom: 0.5px solid var(--color-border-tertiary); margin-bottom: 1.25rem; }
+  .tab { padding: 8px 16px; font-size: 13px; cursor: pointer; color: var(--color-text-secondary); border-bottom: 2px solid transparent; margin-bottom: -0.5px; }
+  .tab.active { color: #16a34a; border-bottom-color: #16a34a; font-weight: 500; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+  .watch-demo-row { display: flex; gap: 1.25rem; align-items: flex-start; }
+  .watch-demo-states { display: flex; flex-direction: column; gap: 0.75rem; flex: 1; }
+  .state-row { display: flex; align-items: center; gap: 10px; }
+  .state-name { font-size: 13px; width: 90px; color: var(--color-text-secondary); }
+  .mini-watch { background: #000; border-radius: 10px; border: 2px solid #333; padding: 5px 5px; width: 72px; }
+  .mw-val { font-size: 14px; font-weight: 700; font-family: monospace; text-align: center; }
+  .mw-zone { font-size: 7px; text-align: center; padding: 1px 0; letter-spacing: 0.3px; }
+  .mw-graph { margin: 2px 0; height: 18px; background: #111; border-radius: 3px; }
+  .file-list { list-style: none; }
+  .file-list li { font-size: 13px; font-family: var(--font-mono); padding: 5px 0; border-bottom: 0.5px solid var(--color-border-tertiary); color: var(--color-text-primary); display: flex; justify-content: space-between; }
+  .file-list li:last-child { border-bottom: none; }
+  .file-tag { font-size: 10px; padding: 1px 6px; border-radius: 4px; font-family: var(--font-sans); }
+  .file-tag.c { background: #dbeafe; color: #1e40af; }
+  .file-tag.js { background: #fef9c3; color: #854d0e; }
+  .file-tag.html { background: #f0fdf4; color: #14532d; }
+  .file-tag.json { background: #faf5ff; color: #581c87; }
+</style>
+
+<div class="dash">
+
+<div class="top-banner">
+  <div>
+    <div class="app-name">GlucoseGuard</div>
+    <div class="app-sub">CGM Watchface for Pebble Time 2 — Spring 2026 Contest</div>
+  </div>
+  <div class="prize-badge">Target: Transparent Time 2</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview')">Overview</div>
+  <div class="tab" onclick="showTab('design')">Design & UX</div>
+  <div class="tab" onclick="showTab('technical')">Technical</div>
+  <div class="tab" onclick="showTab('contest')">Contest strategy</div>
+</div>
+
+<div id="tab-overview" class="tab-content active">
+  <p class="section-label">Why this wins</p>
+  <ul class="judge-criteria">
+    <li><span class="check">✓</span><span><strong>Creativity</strong> — CGM on Pebble was beloved but broken. Reviving it meaningfully for PT2 is emotionally resonant for the T1D/T2D community</span></li>
+    <li><span class="check">✓</span><span><strong>Cleverness</strong> — Uses color zones, adaptive Quick View layout, touch alert dismiss, and persistent cold-start data — all new PT2 capabilities</span></li>
+    <li><span class="check">✓</span><span><strong>New platform use</strong> — Built primary for Emery (200×228, 64-color); secondary for Gabbro. Existing CGM watchfaces only target Basalt/Diorite</span></li>
+    <li><span class="check">✓</span><span><strong>Design quality</strong> — Medical-grade clarity. Color encodes urgency not decoration. Every pixel serves the glance interaction</span></li>
+    <li><span class="check">✓</span><span><strong>Hearts potential</strong> — The T1D community is large, vocal, and organized across Reddit, Facebook groups, Nightscout forums, and TuDiabetes</span></li>
+  </ul>
+
+  <p class="section-label" style="margin-top:1.25rem">Key metrics</p>
+  <div class="metric-grid">
+    <div class="metric">
+      <div class="metric-label">Target users</div>
+      <div class="metric-val green">~537M</div>
+      <div style="font-size:11px; color:var(--color-text-secondary); margin-top:2px">diabetics worldwide</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Data refresh</div>
+      <div class="metric-val">5 min</div>
+      <div style="font-size:11px; color:var(--color-text-secondary); margin-top:2px">matches CGM interval</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Glucose history</div>
+      <div class="metric-val">3 hrs</div>
+      <div style="font-size:11px; color:var(--color-text-secondary); margin-top:2px">37 data points on graph</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Alert dismiss</div>
+      <div class="metric-val amber">15 min</div>
+      <div style="font-size:11px; color:var(--color-text-secondary); margin-top:2px">SELECT button snooze</div>
+    </div>
+  </div>
+
+  <p class="section-label">Data sources supported</p>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Nightscout (primary)</div>
+      <div class="card-body">Open-source CGM platform used by DIY diabetes community. REST API v1. Works with Dexcom G4–G7, Libre, Medtronic, and more via xDrip+.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Dexcom Share (secondary)</div>
+      <div class="card-body">Official Dexcom cloud API. Supports US + International endpoints. Auto-fallback for login failures. Works with G5, G6, G7.</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-design" class="tab-content">
+  <p class="section-label">Color zones</p>
+  <div class="zone-row">
+    <div class="zone-chip" style="background:#7f1d1d; color:#fca5a5;">Urgent Low<br>&lt;55</div>
+    <div class="zone-chip" style="background:#78350f; color:#fcd34d;">Low<br>55–69</div>
+    <div class="zone-chip" style="background:#14532d; color:#86efac;">In Range<br>70–180</div>
+    <div class="zone-chip" style="background:#78350f; color:#fcd34d;">High<br>181–250</div>
+    <div class="zone-chip" style="background:#7f1d1d; color:#fca5a5;">Urgent High<br>&gt;250</div>
+  </div>
+
+  <p class="section-label">Watchface states</p>
+  <div class="watch-demo-row">
+    <div class="watch-demo-states">
+      <div class="state-row">
+        <div class="state-name">In range</div>
+        <div class="mini-watch">
+          <div class="mw-val" style="color:#4ade80;">127</div>
+          <div class="mw-zone" style="color:#4ade80;">IN RANGE ↗ +8</div>
+          <canvas class="mw-graph" id="g1"></canvas>
+        </div>
+        <div style="font-size:12px; color:var(--color-text-secondary);">Green value, trend arrow, delta, green sparkline</div>
+      </div>
+      <div class="state-row">
+        <div class="state-name">Low</div>
+        <div class="mini-watch">
+          <div class="mw-val" style="color:#fb923c;">63</div>
+          <div class="mw-zone" style="color:#fb923c;">LOW ↓↓ -14</div>
+          <canvas class="mw-graph" id="g2"></canvas>
+        </div>
+        <div style="font-size:12px; color:var(--color-text-secondary);">Orange value, double-down arrow, 2× haptic</div>
+      </div>
+      <div class="state-row">
+        <div class="state-name">Urgent low</div>
+        <div class="mini-watch" style="border-color:#ef4444;">
+          <div class="mw-val" style="color:#f87171;">48</div>
+          <div class="mw-zone" style="color:#f87171;">⚠ URGENT LOW</div>
+          <canvas class="mw-graph" id="g3"></canvas>
+        </div>
+        <div style="font-size:12px; color:var(--color-text-secondary);">Red flash, 3× long haptic, SELECT to dismiss</div>
+      </div>
+      <div class="state-row">
+        <div class="state-name">Stale data</div>
+        <div class="mini-watch">
+          <div class="mw-val" style="color:#9ca3af;">--</div>
+          <div class="mw-zone" style="color:#ef4444;">⚠ NO DATA</div>
+          <canvas class="mw-graph" id="g4"></canvas>
+        </div>
+        <div style="font-size:12px; color:var(--color-text-secondary);">Gray value, red warning, staleness timer</div>
+      </div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:1.25rem">Screen layout (Emery 200×228)</p>
+  <div class="card">
+    <table class="data-table">
+      <thead><tr><th>Row</th><th>Content</th><th>Y position</th></tr></thead>
+      <tbody>
+        <tr><td>Status bar</td><td>BT icon · time (HH:MM)</td><td>y=0–22</td></tr>
+        <tr><td>Glucose block</td><td>Large value (Leco 38pt) · trend arrow · delta</td><td>y=28–80</td></tr>
+        <tr><td>Zone label</td><td>"IN RANGE" / "⚠ URGENT LOW" — color coded</td><td>y=106–130</td></tr>
+        <tr><td>Sparkline graph</td><td>3-hr history, threshold lines, colored segments</td><td>y=133–193</td></tr>
+        <tr><td>Stale row</td><td>"Last read: 4 min ago"</td><td>y=190–208</td></tr>
+        <tr><td>Date row</td><td>"Wed Apr 09" — hidden in Quick View</td><td>y=210–228</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="section-label" style="margin-top:1.25rem">UX decisions</p>
+  <div class="three-col">
+    <div class="card">
+      <div class="card-title">Glance-first</div>
+      <div class="card-body" style="font-size:13px;">Color alone conveys zone. User knows if they're OK before reading the number.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Zero-noise baseline</div>
+      <div class="card-body" style="font-size:13px;">No animation when in range. Alerts only fire for urgent conditions.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Persistent cold-start</div>
+      <div class="card-body" style="font-size:13px;">Last known value shown immediately from persist storage. Never blank on wake.</div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-technical" class="tab-content">
+  <p class="section-label">File structure</p>
+  <div class="card">
+    <ul class="file-list">
+      <li><span>src/c/main.c</span><span class="file-tag c">C</span></li>
+      <li><span>src/pkjs/index.js</span><span class="file-tag js">JS</span></li>
+      <li><span>src/pkjs/config.html</span><span class="file-tag html">HTML</span></li>
+      <li><span>package.json</span><span class="file-tag json">JSON</span></li>
+    </ul>
+  </div>
+
+  <p class="section-label" style="margin-top:1.25rem">AppMessage keys (C ↔ JS)</p>
+  <div class="card">
+    <table class="data-table">
+      <thead><tr><th>Key</th><th>ID</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>GLUCOSE_VALUE</td><td>0</td><td>int32</td><td>Current glucose in mg/dL</td></tr>
+        <tr><td>GLUCOSE_TREND</td><td>1</td><td>int32</td><td>0=↑↑ ... 6=↓↓</td></tr>
+        <tr><td>GLUCOSE_DELTA</td><td>2</td><td>int32</td><td>Delta mg/dL (signed)</td></tr>
+        <tr><td>LAST_READ_SEC</td><td>3</td><td>int32</td><td>Unix timestamp of last reading</td></tr>
+        <tr><td>GRAPH_DATA</td><td>4</td><td>byte[]</td><td>37 uint8 values (mgdl÷2)</td></tr>
+        <tr><td>USE_MMOL</td><td>5</td><td>int32</td><td>0=mg/dL, 1=mmol/L</td></tr>
+        <tr><td>HIGH/LOW/URG…</td><td>6–9</td><td>int32</td><td>Threshold values</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p class="section-label" style="margin-top:1.25rem">Key functions</p>
+  <div class="three-col">
+    <div class="card">
+      <div class="card-title">graph_layer_update_proc()</div>
+      <div class="card-body" style="font-size:12px;">Adaptive Y-scale. Dashed threshold lines at low/high. Segments colored by zone. Dot at latest value.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">start_alert_flash()</div>
+      <div class="card-body" style="font-size:12px;">700ms flash timer. Cycles bg ↔ zone color. Triple-pulse haptic. Cancelled by SELECT or zone change.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">prv_layout_for_bounds()</div>
+      <div class="card-body" style="font-size:12px;">UnobstructedArea API. Compresses layout when Quick View active. Date hidden. Graph shrinks.</div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:1.25rem">User needs coverage</p>
+  <div class="card">
+    <table class="data-table">
+      <thead><tr><th>Need</th><th>Priority</th><th>Implementation</th></tr></thead>
+      <tbody>
+        <tr><td>Current glucose value</td><td><span class="pill must">MUST</span></td><td>Leco 38pt, color-coded by zone</td></tr>
+        <tr><td>Trend direction</td><td><span class="pill must">MUST</span></td><td>Unicode arrows ↑↑ ↗ → ↘ ↓↓</td></tr>
+        <tr><td>Rate of change</td><td><span class="pill must">MUST</span></td><td>±delta mg/dL next to arrow</td></tr>
+        <tr><td>3-hour graph</td><td><span class="pill must">MUST</span></td><td>Adaptive sparkline with zone colors</td></tr>
+        <tr><td>Urgent alert</td><td><span class="pill must">MUST</span></td><td>Flash + triple haptic</td></tr>
+        <tr><td>Alert dismiss</td><td><span class="pill should">SHOULD</span></td><td>SELECT button, 15-min snooze</td></tr>
+        <tr><td>Stale data warning</td><td><span class="pill must">MUST</span></td><td>Gray value + red "NO DATA" after 15min</td></tr>
+        <tr><td>mmol/L option</td><td><span class="pill should">SHOULD</span></td><td>Settings toggle, 1-decimal conversion</td></tr>
+        <tr><td>Quick View adapt</td><td><span class="pill must">MUST</span></td><td>UnobstructedArea API, date hidden</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="tab-contest" class="tab-content">
+  <p class="section-label">Prize categories targeted</p>
+  <div class="two-col">
+    <div class="card" style="border: 2px solid #16a34a;">
+      <div class="card-title" style="color:#16a34a;">Judge's choice (transparent Time 2)</div>
+      <div class="card-body" style="font-size:13px;">Criteria: creativity, cleverness, good use of new platforms, and design. GlucoseGuard scores on all four axes. The transparent watch goes to 3 apps — this needs to be in that conversation.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Most hearts — Phase 1 (Apr 2–12)</div>
+      <div class="card-body" style="font-size:13px;">Submit before Apr 12. Community outreach to T1D/T2D forums generates organic hearts. Target top-5 for a Phase 1 watch.</div>
+    </div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title">Developer draw</div>
+      <div class="card-body" style="font-size:13px;">Publishing a new app = 1 draw entry. Low-effort entry into the 10-watch developer pool.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Most hearts — Phase 2 (Apr 13–19)</div>
+      <div class="card-body" style="font-size:13px;">Continue outreach in second half. If Phase 1 didn't land top-5, Phase 2 gives a second chance.</div>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:0.25rem">Publication checklist</p>
+  <ul class="timeline">
+    <li><div class="tl-dot done"></div><span>Set up CloudPebble or local SDK project as "watchface"</span></li>
+    <li><div class="tl-dot done"></div><span>Add Emery + Gabbro to targetPlatforms in package.json</span></li>
+    <li><div class="tl-dot todo"></div><span>Add a real BT icon PNG to resources/images/bt_icon.png</span></li>
+    <li><div class="tl-dot todo"></div><span>Build + test in emulator: <code>pebble build && pebble install</code></span></li>
+    <li><div class="tl-dot todo"></div><span>Test Quick View: <code>pebble emu-set-timeline-quick-view on</code></span></li>
+    <li><div class="tl-dot todo"></div><span>Publish: <code>pebble publish</code> — generates screenshots/GIFs automatically</span></li>
+    <li><div class="tl-dot urgent"></div><span>Post in Nightscout Facebook groups, r/diabetes, r/pebble, TuDiabetes — with demo GIF</span></li>
+    <li><div class="tl-dot urgent"></div><span>Put source on GitHub (public) — increases trust + hearts from developers</span></li>
+  </ul>
+
+  <p class="section-label" style="margin-top:0.5rem">Contest deadline</p>
+  <div class="card" style="background: #fef3c7; border-color: #f59e0b;">
+    <div style="font-size:14px; color:#92400e;">Phase 1 hearts cutoff: <strong>April 12, 2026</strong> — submit ASAP for maximum exposure time.<br>Final deadline: <strong>April 19, 2026 UTC</strong></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach(function(t, i) {
+    var names = ['overview','design','technical','contest'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.tab-content').forEach(function(c) {
+    c.classList.remove('active');
+  });
+  var el = document.getElementById('tab-' + name);
+  if (el) el.classList.add('active');
+}
+
+function drawMiniGraph(id, data, color) {
+  var c = document.getElementById(id);
+  if (!c) return;
+  var ctx = c.getContext('2d');
+  var w = c.width = c.offsetWidth || 62;
+  var h = c.height = c.offsetHeight || 18;
+  ctx.clearRect(0,0,w,h);
+  var mn = Math.min.apply(null, data) - 5;
+  var mx = Math.max.apply(null, data) + 5;
+  var rng = mx - mn || 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  data.forEach(function(v, i) {
+    var x = (i / (data.length-1)) * (w-2) + 1;
+    var y = h - 1 - ((v-mn)/rng * (h-2));
+    if (i === 0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  var last = data[data.length-1];
+  var lx = w-3;
+  var ly = h - 1 - ((last-mn)/rng * (h-2));
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(lx, ly, 2.5, 0, Math.PI*2);
+  ctx.fill();
+}
+
+setTimeout(function() {
+  drawMiniGraph('g1', [98,105,112,118,122,127,127], '#4ade80');
+  drawMiniGraph('g2', [127,118,105,92,80,71,63], '#fb923c');
+  drawMiniGraph('g3', [82,70,61,54,49,48,48], '#f87171');
+  drawMiniGraph('g4', [127,131,135,0,0,0,0], '#6b7280');
+}, 50);
+</script>

@@ -1,0 +1,6 @@
+.mcp.json
+.claude/
+.vscode/
+build/
+*.pbw
+*.pbz

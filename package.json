@@ -1,0 +1,49 @@
+{
+  "name": "glucoseguard",
+  "author": "Michaël Tardi",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app",
+    "watchface",
+    "cgm",
+    "diabetes",
+    "glucose",
+    "nightscout",
+    "dexcom",
+    "health"
+  ],
+  "pebble": {
+    "sdkVersion": "4",
+    "displayName": "GlucoseGuard",
+    "uuid": "552fd91e-ad93-4d0f-ae44-74bc9d3108d6",
+    "description": "A beautiful CGM watchface for Pebble Time 2. Shows your live glucose value, trend arrow, 3-hour graph, and color-coded alerts. Supports Nightscout and Dexcom Share. Built for people living with diabetes.",
+    "longDescription": "GlucoseGuard is a CGM (Continuous Glucose Monitor) watchface designed specifically for the Pebble Time 2's large 64-color e-paper display. Features:\n\n• Large, color-coded glucose value (green = in range, orange = low, red = urgent)\n• Trend arrow and rate-of-change delta\n• 3-hour sparkline graph with low/high threshold lines\n• Urgent alert flash + vibration for critical values\n• Touch SELECT to dismiss alerts for 15 minutes\n• Stale data detection\n• Timeline Quick View support\n• Nightscout API support\n• Dexcom Share support (US + International)\n• mg/dL or mmol/L\n• Customizable thresholds",
+    "messageKeys": {
+      "KEY_GLUCOSE_VALUE":  0,
+      "KEY_GLUCOSE_TREND":  1,
+      "KEY_GLUCOSE_DELTA":  2,
+      "KEY_LAST_READ_SEC":  3,
+      "KEY_GRAPH_DATA":     4,
+      "KEY_USE_MMOL":       5,
+      "KEY_HIGH_THRESHOLD": 6,
+      "KEY_LOW_THRESHOLD":  7,
+      "KEY_URGENT_HIGH":    8,
+      "KEY_URGENT_LOW":     9
+    },
+    "resources": {
+      "media": [
+        {
+          "type": "bitmap",
+          "name": "BT_ICON",
+          "file": "images/bt_icon.png"
+        }
+      ]
+    },
+    "watchapp": {
+      "watchface": true,
+      "hiddenApp": false
+    },
+    "targetPlatforms": ["emery", "gabbro", "basalt", "diorite", "chalk"]
+  },
+  "dependencies": {}
+}
