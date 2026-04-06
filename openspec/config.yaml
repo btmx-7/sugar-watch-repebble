@@ -1,8 +1,11 @@
 schema: pebble-watchface
 
+context_files:
+  - openspec/benchmark.md
+
 context: |
   This is a PebbleOS watchface written in C using the Pebble SDK 4.
-  The app is a CGM (Continuous Glucose Monitor) watchface called GlucoseGuard.
+  The app is a CGM (Continuous Glucose Monitor) watchface called Sugar Watch.
 
   Source layout:
   - src/c/main.c: all watchface UI, data handling, and display logic (single file)

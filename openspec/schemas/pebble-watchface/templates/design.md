@@ -1,11 +1,12 @@
 ## Benchmark References
 
-<!-- 2-3 reference watchfaces or apps that inform the visual direction. -->
-<!-- For each: name, what it does well, which principle to borrow. -->
+<!-- Pull the 2-3 most relevant entries from openspec/benchmark.md. -->
+<!-- Format: Principle N from benchmark.md - one sentence on how it applies here. -->
+<!-- Do not copy the full benchmark; summarize the constraint. -->
 
-| Reference | What it does well | Principle to borrow |
+| Principle | Source (benchmark.md §) | Application to this change |
 |---|---|---|
-| <!-- name --> | <!-- observation --> | <!-- takeaway --> |
+| <!-- e.g. One hero element --> | <!-- e.g. Principle 1 --> | <!-- e.g. Glucose value owns 40% screen height --> |
 
 ---
 
@@ -61,13 +62,14 @@
 
 ---
 
-## PenPot Mockup
+## Design Tool Link
 
-<!-- Use the PenPot MCP to build frames for each variant. -->
-<!-- One page per platform (Time 2 / Round 2). -->
-<!-- Record the board URL here once created. -->
+<!-- Use the Figma MCP (use_figma tool) to generate frames for each variant. -->
+<!-- PenPot MCP is read-only - it cannot create designs. Use Figma. -->
+<!-- Invoke the figma-use skill before calling use_figma. -->
+<!-- One frame per variant per platform (Time 2 200x228 / Round 2 260x260). -->
 
-**PenPot Link:** <!-- paste URL here -->
+**Figma Link:** <!-- paste URL here -->
 
 ---
 

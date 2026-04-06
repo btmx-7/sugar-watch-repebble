@@ -41,28 +41,31 @@ artifacts:
   - id: design
     generates: design.md
     optional: true
-    description: UX exploration and PenPot mockup - variants, decisions, selected layout
+    description: UX exploration and Figma mockup - variants, decisions, selected layout
     template: design.md
     instruction: |
       Create the design document that explores layout variants before committing to
       pixel coordinates. This is an optional step for changes that need visual
       exploration before writing layout.md.
 
-      Use the PenPot MCP to build actual mockups from the zone descriptions below.
-      The artifact is complete when one variant is selected and a PenPot link is recorded.
+      The artifact is complete when one variant is selected and a Figma link is recorded.
 
-      Sections:
+      --- BENCHMARK CONTEXT ---
+      Read openspec/benchmark.md before writing any variant.
+      - Apply the Consolidated UX Principles as hard constraints on every variant.
+        Cite any intentionally broken principle by number and justify it.
+      - Use the Feature Coverage Matrix to confirm this change does not regress
+        a gap that Sugar Watch already closes.
+      - Pull the 2-3 most relevant benchmark lessons into the Benchmark References
+        section of this document. Summarize; do not copy the full file.
 
-      **Benchmark References**
-      List 2-3 reference watchfaces or apps that inform the visual direction.
-      For each: name, what it does well, which principle to borrow.
-
-      **Layout Variants**
+      --- LAYOUT VARIANTS ---
       Define 2-3 named variants. For each:
       - Who it is for (one sentence)
       - Hero element (what dominates the screen)
       - ASCII zone diagram using named zones
       - Zone role table: Zone | Purpose | Key element
+      - Which benchmark principles constrain this variant (cite by number)
 
       Zone naming conventions:
       - status-bar: top strip (BT icon, battery, secondary info)
@@ -72,25 +75,43 @@ artifacts:
       - graph: sparkline area
       - footer: bottom strip (time, date)
 
-      **PenPot Mockup**
-      Use the PenPot MCP to build a frame for each variant:
-      - One page per platform (Time 2 / Round 2)
-      - Use the color system from config.yaml (green/yellow/orange/red/gray/white/black)
-      - Use the font hierarchy from config.yaml (LECO_42 for hero numbers, GOTHIC for labels)
-      - Represent layers as labeled rectangles if exact fonts are unavailable
-      - Record the PenPot board URL in this document under ## PenPot Link
+      --- FIGMA MOCKUP GENERATION ---
+      After writing variants, generate mockups using the Figma MCP (use_figma tool).
+      NOTE: PenPot MCP is read-only and cannot create designs. Always use Figma.
 
-      **Decision**
+      Steps:
+      1. Invoke the figma-use skill before calling use_figma (mandatory prerequisite).
+      2. Create a new Figma file (or use an existing one if the user provides a URL).
+      3. For each variant, create one frame per platform:
+         - Time 2: 200 x 228 px, rectangular
+         - Round 2: 260 x 260 px, circular clip (avoid corners)
+      4. Apply the Sugar Watch color system:
+         - Background: #000000
+         - In range: #00C853 (GColorGreen)
+         - High: #FFD600 (GColorChromeYellow)
+         - Low: #FF6D00 (GColorOrange)
+         - Urgent: #D50000 (GColorRed)
+         - Stale: #B0BEC5 (GColorLightGray)
+         - Text/metadata: #FFFFFF
+      5. Apply the font hierarchy:
+         - Hero numbers: largest bold numeric (simulate LECO_42 with a monospace bold)
+         - Secondary values: medium bold (simulate GOTHIC_24_BOLD)
+         - Labels/metadata: small (simulate GOTHIC_14)
+      6. Label each zone as a named rectangle if exact Pebble fonts are unavailable.
+      7. Record the Figma file URL under ## Design Tool Link.
+
+      --- DECISION ---
       State which variant is selected and why. This becomes the input to layout.md.
       Format:
       ```
       Selected variant: <name>
       Reason: <one sentence>
+      Benchmark principles satisfied: <numbers from benchmark.md>
       Deferred variants: <names> - <why not chosen>
       ```
 
-      **Open Questions**
-      List any visual decisions left to PenPot exploration (battery style, icon size,
+      --- OPEN QUESTIONS ---
+      List visual decisions left to Figma exploration (battery style, icon size,
       separator weight, etc.) with a note on who decides and when.
     requires:
       - proposal
