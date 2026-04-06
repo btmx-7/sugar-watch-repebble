@@ -1,5 +1,5 @@
 /**
- * GlucoseGuard — Phone-side JavaScript
+ * Sugar Watch — Phone-side JavaScript
  * Fetches CGM data from Nightscout (or Dexcom Share) and sends to watch via AppMessage
  *
  * Supports:
@@ -89,8 +89,8 @@ function sendToWatch(glucose, trend, delta, lastReadSec, graphArray) {
   msg[KEY_URGENT_LOW]      = parseInt(settings.urgentLow)  || 55;
 
   Pebble.sendAppMessage(msg,
-    function() { console.log('GlucoseGuard: data sent to watch OK'); },
-    function(e) { console.error('GlucoseGuard: send failed: ' + JSON.stringify(e)); }
+    function() { console.log('Sugar Watch: data sent to watch OK'); },
+    function(e) { console.error('Sugar Watch: send failed: ' + JSON.stringify(e)); }
   );
 }
 
@@ -98,7 +98,7 @@ function sendToWatch(glucose, trend, delta, lastReadSec, graphArray) {
 
 function fetchNightscout() {
   if (!settings.nsUrl) {
-    console.log('GlucoseGuard: No Nightscout URL configured');
+    console.log('Sugar Watch: No Nightscout URL configured');
     return;
   }
 
@@ -110,7 +110,7 @@ function fetchNightscout() {
     url += '&token=' + encodeURIComponent(settings.nsToken);
   }
 
-  console.log('GlucoseGuard: fetching ' + url);
+  console.log('Sugar Watch: fetching ' + url);
 
   var xhr = new XMLHttpRequest();
   xhr.onload = function() {
@@ -118,7 +118,7 @@ function fetchNightscout() {
       try {
         var entries = JSON.parse(xhr.responseText);
         if (!entries || entries.length === 0) {
-          console.log('GlucoseGuard: No entries returned');
+          console.log('Sugar Watch: No entries returned');
           return;
         }
 
@@ -146,14 +146,14 @@ function fetchNightscout() {
         sendToWatch(glucose, trend, delta, lastRead, graphData);
 
       } catch (e) {
-        console.error('GlucoseGuard: parse error: ' + e.message);
+        console.error('Sugar Watch: parse error: ' + e.message);
       }
     } else {
-      console.error('GlucoseGuard: HTTP error ' + xhr.status);
+      console.error('Sugar Watch: HTTP error ' + xhr.status);
     }
   };
   xhr.onerror = function() {
-    console.error('GlucoseGuard: network error');
+    console.error('Sugar Watch: network error');
   };
   xhr.open('GET', url);
   xhr.send();
@@ -181,15 +181,15 @@ function dexcomLogin(callback) {
   xhr.onload = function() {
     if (xhr.status === 200) {
       s_dexcom_session_id = xhr.responseText.replace(/"/g, '');
-      console.log('GlucoseGuard: Dexcom session OK');
+      console.log('Sugar Watch: Dexcom session OK');
       callback(true);
     } else if (xhr.status === 500 && s_dexcom_base_url.indexOf('shareous') === -1) {
       // Try international endpoint
       s_dexcom_base_url = 'https://shareous1.dexcom.com';
-      console.log('GlucoseGuard: trying Dexcom international endpoint');
+      console.log('Sugar Watch: trying Dexcom international endpoint');
       dexcomLogin(callback);
     } else {
-      console.error('GlucoseGuard: Dexcom login failed ' + xhr.status);
+      console.error('Sugar Watch: Dexcom login failed ' + xhr.status);
       callback(false);
     }
   };
@@ -237,7 +237,7 @@ function dexcomFetchReadings() {
 
         sendToWatch(glucose, trend, delta, lastRead, graphData);
       } catch(e) {
-        console.error('GlucoseGuard: Dexcom parse error: ' + e.message);
+        console.error('Sugar Watch: Dexcom parse error: ' + e.message);
       }
     } else if (xhr.status === 500) {
       // Session expired, re-login
@@ -245,7 +245,7 @@ function dexcomFetchReadings() {
       fetchDexcom();
     }
   };
-  xhr.onerror = function() { console.error('GlucoseGuard: Dexcom readings network error'); };
+  xhr.onerror = function() { console.error('Sugar Watch: Dexcom readings network error'); };
   xhr.open('GET', url);
   xhr.setRequestHeader('Accept', 'application/json');
   xhr.send();
@@ -253,7 +253,7 @@ function dexcomFetchReadings() {
 
 function fetchDexcom() {
   if (!settings.dexcomUser || !settings.dexcomPass) {
-    console.log('GlucoseGuard: No Dexcom credentials configured');
+    console.log('Sugar Watch: No Dexcom credentials configured');
     return;
   }
 
@@ -280,7 +280,7 @@ function fetchData() {
 // ─── Pebble Event Handlers ───────────────────────────────────────────────────
 
 Pebble.addEventListener('ready', function() {
-  console.log('GlucoseGuard JS ready');
+  console.log('Sugar Watch JS ready');
   loadSettings();
   fetchData();
   // Refresh every 5 minutes
@@ -288,7 +288,7 @@ Pebble.addEventListener('ready', function() {
 });
 
 Pebble.addEventListener('appmessage', function(e) {
-  console.log('GlucoseGuard: message from watch: ' + JSON.stringify(e.payload));
+  console.log('Sugar Watch: message from watch: ' + JSON.stringify(e.payload));
   // Watch can request a refresh by sending any message
   fetchData();
 });
@@ -315,7 +315,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
       saveSettings(data);
       fetchData();
     } catch(err) {
-      console.error('GlucoseGuard: config parse error: ' + err);
+      console.error('Sugar Watch: config parse error: ' + err);
     }
   }
 });

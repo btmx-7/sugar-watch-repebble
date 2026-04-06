@@ -2,7 +2,7 @@
 
 ## Why
 
-Five bugs and missing features were identified during initial codebase review of GlucoseGuard. None require architectural changes, but left unfixed they would cause incorrect data display (mmol/L delta), silent data loss (NaN timestamps), a broken settings page (dead URL), and a missing user preference (graph window).
+Five bugs and missing features were identified during initial codebase review of Sugar Watch. None require architectural changes, but left unfixed they would cause incorrect data display (mmol/L delta), silent data loss (NaN timestamps), a broken settings page (dead URL), and a missing user preference (graph window).
 
 ## What Changes
 

@@ -1,4 +1,4 @@
-# GlucoseGuard — OpenSpec Framework
+# Sugar Watch — OpenSpec Framework
 ### Pebble Time 2 CGM Watchface · Spring 2026 Contest Entry
 
 ---
@@ -7,7 +7,7 @@
 
 | Field | Value |
 |---|---|
-| **App Name** | GlucoseGuard |
+| **App Name** | Sugar Watch |
 | **App Kind** | Watchface |
 | **Target Platform** | Emery (Pebble Time 2, 200×228 px, 64-color e-paper) |
 | **Secondary Platform** | Gabbro (Pebble Round 2, 260×260 px) |

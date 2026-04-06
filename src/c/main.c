@@ -1,5 +1,5 @@
 /**
- * GlucoseGuard — CGM Watchface for Pebble Time 2 (Emery) & Round 2 (Gabbro)
+ * Sugar Watch — CGM Watchface for Pebble Time 2 (Emery) & Round 2 (Gabbro)
  * Spring 2026 rePebble Contest Entry
  *
  * Data source: Nightscout-compatible API (or Dexcom Share via phone JS)
