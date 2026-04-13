@@ -5,47 +5,68 @@ context_files:
 
 context: |
   This is a PebbleOS watchface written in C using the Pebble SDK 4.
-  The app is a CGM (Continuous Glucose Monitor) watchface called Sugar Watch.
+  The app is a CGM (Continuous Glucose Monitor) watchface called Steady (formerly Sugar Watch).
 
   Source layout:
-  - src/c/main.c: all watchface UI, data handling, and display logic (single file)
-  - src/pkjs/app.js: JavaScript companion, fetches CGM data from phone
-  - src/pkjs/config.js: Clay configuration schema for settings
-  - appinfo.json: app metadata, capabilities, platform targets
-  - resources/: fonts and images
+  - src/c/main.c: all watchface UI, data handling, and display logic (single file, ~1280 lines)
+  - src/pkjs/index.js: JavaScript companion — fetches CGM (Nightscout / Dexcom Share) and weather (OpenMeteo)
+  - src/pkjs/config.html: HTML settings page (layout selector, slot dropdowns, CGM source, thresholds)
+  - package.json: app metadata, AppMessage keys, font resources, platform targets
+  - resources/fonts/: Inter_18pt-Black.ttf (64px digits), MaterialSymbolsRounded_28pt-Medium.ttf (16px icons)
+
+  Two layouts (user-selectable):
+  - Simple: 2-row time hero (Inter Black 64px, 4 separate digit layers), 4 corner widget slots
+  - Dashboard: LECO_36 single-row time, 3 top widget slots, sparkline graph, CGM trend/value panel
+
+  4 configurable widget slots (each a 56x56 circle layer with arc-stroke indicator):
+  - Slot types: SLOT_NONE, SLOT_BATTERY, SLOT_WEATHER, SLOT_HEART_RATE, SLOT_STEPS, SLOT_CGM
+  - Arc: 240° range, 3px stroke, GColorCyan active, GColorDarkGray track
 
   Target platforms:
   - Time 2 (emery): 200x228 px, color e-paper, rectangular
   - Round 2 (gabbro): 260x260 px, circular clip, color e-paper
+  - Also targets basalt, diorite, chalk (legacy color + B&W)
 
   Pebble SDK patterns used in this project:
   - TextLayer for all text rendering
-  - Custom Layer with layer_set_update_proc for the sparkline graph and separator
-  - prv_layout_for_bounds() handles all frame calculations for both normal and
-    compact (Quick View) modes
+  - layer_create_with_data() for slot layers (SlotRenderData embedded in layer)
+  - layer_set_update_proc with slot_update_proc for arc-stroke widget drawing
+  - Custom Layer with layer_set_update_proc for the sparkline graph
+  - prv_layout_for_bounds(GRect bounds) handles all frame calculations for both layouts,
+    both platforms (T2/R2), and compact (Quick View) mode
   - update_display() is the central function called whenever data or state changes
-  - Clay framework for in-app settings (via config.js)
-  - AppMessage for phone-to-watch data transfer (glucose readings)
+  - UnobstructedAreaService for Quick View compact mode detection
+  - HealthService (health_service_events_subscribe) for HR and step count
+  - AppMessage for phone-to-watch data transfer (17 keys, 0-16)
+
+  AppMessage keys (defined in package.json and main.c):
+  - 0-9: glucose value/trend/delta/last-read, graph data, mmol toggle, thresholds
+  - 10: KEY_WEATHER_TEMP (int8_t, -128 = unavailable)
+  - 11: KEY_WEATHER_ICON (0-7 icon index)
+  - 12: KEY_LAYOUT (0=Simple, 1=Dashboard)
+  - 13-16: KEY_SLOT_0..3 (SlotType enum value)
 
   Font system (used in this project):
-  - FONT_KEY_LECO_38_BOLD_NUMBERS / FONT_KEY_LECO_42_NUMBERS: large numbers
-  - FONT_KEY_GOTHIC_28_BOLD: medium bold text
-  - FONT_KEY_GOTHIC_24_BOLD: secondary values
-  - FONT_KEY_GOTHIC_18_BOLD: labels
-  - FONT_KEY_GOTHIC_14: compact/small text
+  - RESOURCE_ID_TIME_DIGITS_64: Inter Black 64px, digits [0-9] only (Simple layout 2-row time)
+  - RESOURCE_ID_MATERIAL_SYMBOLS_16: Material Symbols Rounded 16px (icons in slots and status bar)
+  - FONT_KEY_LECO_36_BOLD_NUMBERS: Dashboard single-row time (includes colon)
+  - FONT_KEY_GOTHIC_24_BOLD: slot value text
+  - FONT_KEY_GOTHIC_18_BOLD: secondary values
+  - FONT_KEY_GOTHIC_14: unit labels, day/month, stale row
 
   Glucose zone color scheme (do not change without a proposal):
-  - Normal range: GColorGreen
-  - Approaching limit: GColorChromeYellow
-  - Mildly out of range: GColorOrange
-  - Urgently out of range: GColorRed
+  - Urgent low/high: GColorRed
+  - Low: GColorOrange
+  - In range: GColorMintGreen
+  - High: GColorChromeYellow
   - Stale / no data: GColorLightGray
+  - Theme accent: GColorCyan (arc strokes, BT icon, subtle digit, unit text)
+  - Subtle: GColorMediumAquamarine (day/month, first hour digit)
 
   Contest context:
   - Spring 2026 Pebble App Contest runs April 2-19, 2026
   - Team judging criteria: creativity, cleverness, good use of new platforms, design
-  - Key features judges want to see: Quick View support, Round 2 support
-  - April 12 deadline for phase 1 Most Hearts category
+  - Key features judges want to see: Quick View support, Round 2 support, both new platforms
 
 rules: |
   - All layout pixel values (GRect frames, y-coordinates, heights) must match
@@ -53,7 +74,7 @@ rules: |
   - Never modify prv_layout_for_bounds() without updating BOTH the normal and
     compact (Quick View) branches.
   - Buffer size for snprintf: always calculate worst-case + null terminator.
-    Example: glucose value "-399 mg/dL" = 10 chars + null = 11 bytes minimum.
+    Example: glucose value "-399" = 4 chars + null = 5 bytes minimum for value_str[8].
   - Layer creation in window_load must be mirrored by destruction in window_unload.
   - Do not add features beyond the current change's proposal and specs.
   - pebble build must produce zero warnings. Treat all warnings as errors.

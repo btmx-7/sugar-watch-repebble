@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <title>Sugar Watch Settings</title>
+  <title>Steady Settings</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -13,14 +13,14 @@
       padding: 0 0 40px 0;
     }
     .header {
-      background: linear-gradient(135deg, #00c853, #1b5e20);
+      background: linear-gradient(135deg, #00bcd4, #006064);
       padding: 24px 20px 20px;
       text-align: center;
     }
     .header h1 {
       font-size: 22px;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
     }
     .header p {
       font-size: 13px;
@@ -35,7 +35,7 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 1px;
-      color: #00c853;
+      color: #00bcd4;
       margin-bottom: 8px;
       padding: 0 4px;
     }
@@ -73,9 +73,7 @@
       margin-top: 8px;
       outline: none;
     }
-    input:focus, select:focus {
-      border-color: #00c853;
-    }
+    input:focus, select:focus { border-color: #00bcd4; }
     .field-full {
       flex-direction: column;
       align-items: flex-start;
@@ -104,25 +102,21 @@
       border-radius: 50%;
       transition: transform 0.2s;
     }
-    .toggle input:checked + .toggle-slider { background: #00c853; }
+    .toggle input:checked + .toggle-slider { background: #00bcd4; }
     .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
-
     .threshold-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0;
     }
-    .threshold-row .field {
-      border-right: 1px solid #2a2a2a;
-    }
+    .threshold-row .field { border-right: 1px solid #2a2a2a; }
     .threshold-row .field:last-child { border-right: none; }
-
     .save-btn {
       display: block;
       width: calc(100% - 32px);
       margin: 24px 16px 0;
       padding: 16px;
-      background: #00c853;
+      background: #00bcd4;
       color: #000;
       font-size: 16px;
       font-weight: 700;
@@ -132,7 +126,6 @@
       letter-spacing: 0.5px;
     }
     .save-btn:active { opacity: 0.8; }
-
     .zone-preview {
       display: flex;
       gap: 6px;
@@ -155,8 +148,8 @@
 <body>
 
 <div class="header">
-  <h1>🩸 Sugar Watch</h1>
-  <p>CGM Watchface Settings</p>
+  <h1>Steady</h1>
+  <p>Watchface Settings</p>
 </div>
 
 <div class="zone-preview">
@@ -167,6 +160,82 @@
   <div class="zone-chip" style="background:#c62828; color:#fff">URGENT<br>HIGH</div>
 </div>
 
+<!-- Layout -->
+<div class="section">
+  <div class="section-title">Layout</div>
+  <div class="card">
+    <div class="field field-full">
+      <div class="field-label">Watchface Layout
+        <span class="field-hint">Simple: large time hero. Dashboard: time + glucose graph.</span>
+      </div>
+      <select id="layout">
+        <option value="0">Simple (Clock-first)</option>
+        <option value="1">Dashboard (Glucose-first)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Widget Slots -->
+<div class="section">
+  <div class="section-title">Widget Slots</div>
+  <div class="card">
+    <div class="field field-full">
+      <div class="field-label">Slot A — Top Left
+        <span class="field-hint">Simple: top-left corner. Dashboard: left slot.</span>
+      </div>
+      <select id="slot0">
+        <option value="0">None</option>
+        <option value="1">Battery</option>
+        <option value="2">Weather</option>
+        <option value="3">Heart Rate</option>
+        <option value="4">Steps</option>
+        <option value="5">Glucose (CGM)</option>
+      </select>
+    </div>
+    <div class="field field-full">
+      <div class="field-label">Slot B — Top Right
+        <span class="field-hint">Simple: top-right corner. Dashboard: center slot.</span>
+      </div>
+      <select id="slot1">
+        <option value="0">None</option>
+        <option value="1">Battery</option>
+        <option value="2">Weather</option>
+        <option value="3">Heart Rate</option>
+        <option value="4">Steps</option>
+        <option value="5">Glucose (CGM)</option>
+      </select>
+    </div>
+    <div class="field field-full">
+      <div class="field-label">Slot C — Bottom Left
+        <span class="field-hint">Simple: bottom-left corner. Dashboard: right slot.</span>
+      </div>
+      <select id="slot2">
+        <option value="0">None</option>
+        <option value="1">Battery</option>
+        <option value="2">Weather</option>
+        <option value="3">Heart Rate</option>
+        <option value="4">Steps</option>
+        <option value="5">Glucose (CGM)</option>
+      </select>
+    </div>
+    <div class="field field-full">
+      <div class="field-label">Slot D — Bottom Right
+        <span class="field-hint">Simple only. Not shown in Dashboard layout.</span>
+      </div>
+      <select id="slot3">
+        <option value="0">None</option>
+        <option value="1">Battery</option>
+        <option value="2">Weather</option>
+        <option value="3">Heart Rate</option>
+        <option value="4">Steps</option>
+        <option value="5">Glucose (CGM)</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- Data Source -->
 <div class="section">
   <div class="section-title">Data Source</div>
   <div class="card">
@@ -216,6 +285,7 @@
   </div>
 </div>
 
+<!-- Display -->
 <div class="section">
   <div class="section-title">Display</div>
   <div class="card">
@@ -230,7 +300,7 @@
     </div>
     <div class="field field-full">
       <div class="field-label">Graph Window
-        <span class="field-hint">Hours of glucose history shown in graph</span>
+        <span class="field-hint">Hours of glucose history in Dashboard graph</span>
       </div>
       <select id="graphWindow">
         <option value="13">1 hour</option>
@@ -241,6 +311,7 @@
   </div>
 </div>
 
+<!-- Alert Thresholds -->
 <div class="section">
   <div class="section-title">Alert Thresholds</div>
   <div class="card">
@@ -275,26 +346,35 @@
   </div>
 </div>
 
-<button class="save-btn" onclick="save()">Save & Apply</button>
+<button class="save-btn" onclick="save()">Save &amp; Apply</button>
 
 <script>
-  // ── Load params from URL ──
   var params = {};
   window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi, function(m, k, v) {
     params[k] = decodeURIComponent(v);
   });
 
-  document.getElementById('nsUrl').value      = params.nsUrl      || '';
-  document.getElementById('dexcomUser').value = params.dexcomUser || '';
-  document.getElementById('dataSource').value = params.dataSource || 'nightscout';
-  document.getElementById('useMmol').checked  = params.useMmol === '1';
-  document.getElementById('lowThresh').value  = params.lowThresh  || '70';
-  document.getElementById('highThresh').value = params.highThresh || '180';
+  // Layout & slots
+  document.getElementById('layout').value   = params.layout || '0';
+  document.getElementById('slot0').value    = params.slot0  || '2';  // Weather
+  document.getElementById('slot1').value    = params.slot1  || '1';  // Battery
+  document.getElementById('slot2').value    = params.slot2  || '5';  // CGM
+  document.getElementById('slot3').value    = params.slot3  || '3';  // Heart Rate
+
+  // CGM source
+  document.getElementById('nsUrl').value       = params.nsUrl      || '';
+  document.getElementById('dexcomUser').value  = params.dexcomUser || '';
+  document.getElementById('dataSource').value  = params.dataSource || 'nightscout';
+
+  // Display
+  document.getElementById('useMmol').checked   = params.useMmol === '1';
+  document.getElementById('lowThresh').value   = params.lowThresh   || '70';
+  document.getElementById('highThresh').value  = params.highThresh  || '180';
   document.getElementById('urgentLow').value   = params.urgentLow   || '55';
   document.getElementById('urgentHigh').value  = params.urgentHigh  || '250';
   document.getElementById('graphWindow').value = params.graphWindow || '37';
 
-  // ── Toggle source sections ──
+  // Toggle source sections
   document.getElementById('dataSource').addEventListener('change', function() {
     var src = this.value;
     document.getElementById('nightscout-section').style.display =
@@ -306,6 +386,11 @@
 
   function save() {
     var data = {
+      layout:      document.getElementById('layout').value,
+      slot0:       document.getElementById('slot0').value,
+      slot1:       document.getElementById('slot1').value,
+      slot2:       document.getElementById('slot2').value,
+      slot3:       document.getElementById('slot3').value,
       nsUrl:       document.getElementById('nsUrl').value,
       nsToken:     document.getElementById('nsToken').value,
       dexcomUser:  document.getElementById('dexcomUser').value,
@@ -322,7 +407,6 @@
     var encoded = encodeURIComponent(JSON.stringify(data));
 
     if (typeof Pebble !== 'undefined') {
-      // Running in Pebble config webview
       document.location = 'pebblejs://close#' + encoded;
     } else {
       alert('Saved! (Preview mode — no watch connected)');
