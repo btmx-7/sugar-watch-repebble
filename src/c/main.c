@@ -11,6 +11,21 @@
 
 #include <pebble.h>
 
+// ─── Design System Colors ────────────────────────────────────────────────────
+// Source: Figma variables (bKKqEkSN0q1rOdsEX8OpaE)
+// Pebble GColor: argb = 11_RR_GG_BB, 2 bits/channel (0=0x00,1=0x55,2=0xAA,3=0xFF)
+#define CLR_TEXT_SUBTLE    ((GColor){.argb = 0xEF})  // #AAFFFF text/subtle
+#define CLR_TEXT_INVERTED  ((GColor){.argb = 0xFF})  // #FFFFFF text/inverted
+#define CLR_TEXT_DEFAULT   ((GColor){.argb = 0xCF})  // #00FFFF text/default
+#define CLR_ICON_DEFAULT   ((GColor){.argb = 0xDF})  // #55FFFF icon/default
+#define CLR_ICON_SUBTLE    ((GColor){.argb = 0xCA})  // #00AAAA icon/subtle
+#define CLR_BORDER_SUBTLE  ((GColor){.argb = 0xC5})  // #005555 surface/border/subtle
+#define CLR_STATE_DANGER   ((GColor){.argb = 0xF0})  // #FF0000 state/danger
+#define CLR_STATE_WARNING  ((GColor){.argb = 0xF8})  // #FFAA00 state/warning
+#define CLR_STATE_POSITIVE ((GColor){.argb = 0xCE})  // #00FFAA state/positive
+#define CLR_STATE_INACTIVE ((GColor){.argb = 0xEA})  // #AAAAAA state/inactive
+#define CLR_STATE_DISABLED ((GColor){.argb = 0xD5})  // #555555 state/disabled
+
 // ─── AppMessage Keys ─────────────────────────────────────────────────────────
 #define KEY_GLUCOSE_VALUE   0
 #define KEY_GLUCOSE_TREND   1
@@ -188,6 +203,8 @@ static bool      s_flash_on       = false;
 // ─── UI Fonts ────────────────────────────────────────────────────────────────
 static GFont s_time_font;    // Inter Black 64px (RESOURCE_ID_TIME_DIGITS_64)
 static GFont s_symbol_font;  // Material Symbols 16px (RESOURCE_ID_MATERIAL_SYMBOLS_16)
+static GFont s_value_font;   // Inter Black 20px (RESOURCE_ID_DATA_VALUE_20)
+static GFont s_unit_font;    // Inter Black 10px (RESOURCE_ID_DATA_UNIT_10)
 
 // ─── UI Layers ───────────────────────────────────────────────────────────────
 static Window    *s_main_window;
@@ -229,12 +246,12 @@ static GlucoseZone get_zone(int32_t glucose_mgdl) {
 
 static GColor zone_color(GlucoseZone zone) {
   switch (zone) {
-    case ZONE_URGENT_LOW:  return GColorRed;
-    case ZONE_LOW:         return GColorOrange;
-    case ZONE_IN_RANGE:    return GColorMintGreen;
-    case ZONE_HIGH:        return GColorChromeYellow;
-    case ZONE_URGENT_HIGH: return GColorRed;
-    default:               return GColorLightGray;
+    case ZONE_URGENT_LOW:  return CLR_STATE_DANGER;
+    case ZONE_LOW:         return CLR_STATE_WARNING;
+    case ZONE_IN_RANGE:    return CLR_STATE_POSITIVE;
+    case ZONE_HIGH:        return CLR_STATE_WARNING;
+    case ZONE_URGENT_HIGH: return CLR_STATE_DANGER;
+    default:               return CLR_STATE_INACTIVE;
   }
 }
 
@@ -271,7 +288,7 @@ static const char* trend_icon(GlucoseTrend t) {
     case TREND_FORTY_FIVE_DOWN: return ICON_TREND_45_DOWN;
     case TREND_SINGLE_DOWN:     return ICON_TREND_SINGLE_DOWN;
     case TREND_DOUBLE_DOWN:     return ICON_TREND_DOUBLE_DOWN;
-    default:                    return ICON_TREND_NONE;
+    default:                    return NULL;
   }
 }
 
@@ -362,7 +379,9 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       snprintf(d->value_str, sizeof(d->value_str), "%d", pct);
       snprintf(d->unit_str,  sizeof(d->unit_str),  "%%");
       d->icon_glyph  = ICON_BATTERY;
-      d->icon_color  = pct <= 20 ? GColorRed : (pct <= 50 ? GColorChromeYellow : GColorCyan);
+      d->icon_color  = pct <= 20 ? CLR_STATE_DANGER
+                     : pct <= 50 ? CLR_STATE_WARNING
+                     : CLR_ICON_DEFAULT;
       break;
     }
     case SLOT_WEATHER: {
@@ -373,7 +392,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       snprintf(d->unit_str, sizeof(d->unit_str), "\xc2\xb0" "C");  // °C in UTF-8
       uint8_t icon_idx = s_weather_icon < 8 ? s_weather_icon : 7;
       d->icon_glyph = s_weather_icons[icon_idx];
-      d->icon_color = GColorCyan;
+      d->icon_color = avail ? CLR_ICON_DEFAULT : CLR_STATE_INACTIVE;
       break;
     }
     case SLOT_HEART_RATE: {
@@ -385,7 +404,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       else        snprintf(d->value_str, sizeof(d->value_str), "--");
       snprintf(d->unit_str, sizeof(d->unit_str), "bpm");
       d->icon_glyph = ICON_HEART_RATE;
-      d->icon_color = GColorCyan;
+      d->icon_color = CLR_ICON_SUBTLE;
       break;
     }
     case SLOT_STEPS: {
@@ -399,7 +418,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
         snprintf(d->value_str, sizeof(d->value_str), "%lu", (unsigned long)steps);
       snprintf(d->unit_str, sizeof(d->unit_str), "steps");
       d->icon_glyph = ICON_STEPS;
-      d->icon_color = GColorCyan;
+      d->icon_color = CLR_ICON_SUBTLE;
       break;
     }
     case SLOT_CGM: {
@@ -414,7 +433,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
         format_glucose(d->value_str, sizeof(d->value_str), s_glucose);
       snprintf(d->unit_str, sizeof(d->unit_str), s_settings.use_mmol ? "mmol" : "mg/dL");
       d->icon_glyph = trend_icon((GlucoseTrend)s_trend);
-      d->icon_color = stale ? GColorLightGray : zone_color(zone);
+      d->icon_color = stale ? CLR_STATE_INACTIVE : zone_color(zone);
       break;
     }
     default:  // SLOT_NONE
@@ -434,51 +453,56 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   int w = bounds.size.w;
   int h = bounds.size.h;
-  GRect arc_bounds = GRect(2, 2, w - 4, h - 4);
+  // Arc drawn in a 48×44 rect, bottom-aligned with 4px side margin and 10px top offset
+  // Matches Figma: h-[44px] w-[48px] bottom-aligned in p-[2px] 56×56 container
+  GRect arc_bounds = GRect(4, 10, w - 8, h - 14);
 
   // Battery ring: gap at top (30°→330°). All others: gap at bottom (210°→510°).
   bool is_battery = (d->type == SLOT_BATTERY);
   int arc_start = is_battery ? 30  : 210;
   int arc_end   = is_battery ? 330 : 510;
 
-  // Background track arc (300° sweep)
-  graphics_context_set_stroke_color(ctx, GColorDarkGray);
-  graphics_context_set_stroke_width(ctx, 3);
+  // Background track arc — surface/border/subtle (#005555), 2px stroke
+  graphics_context_set_stroke_color(ctx, CLR_BORDER_SUBTLE);
+  graphics_context_set_stroke_width(ctx, 2);
   graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
     DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(arc_end));
 
-  // Active fill arc
+  // Active fill arc — icon_color, 2px stroke
   if (d->value_normalized > 0) {
     int fill_angle = arc_start + (d->value_normalized * 300 / 100);
     if (fill_angle > arc_end) fill_angle = arc_end;
-    graphics_context_set_stroke_color(ctx, GColorCyan);
+    graphics_context_set_stroke_color(ctx, d->icon_color);
+    graphics_context_set_stroke_width(ctx, 2);
     graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
       DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(fill_angle));
   }
 
-  // Icon (top center, 16px)
+  // Icon — 16px Material Symbol, top-center (absolute at y=2, 20px tall to prevent clipping)
   if (d->icon_glyph && s_symbol_font) {
     graphics_context_set_text_color(ctx, d->icon_color);
-    GRect icon_rect = GRect(0, 4, w, 18);
+    GRect icon_rect = GRect(0, 2, w, 20);
     graphics_draw_text(ctx, d->icon_glyph, s_symbol_font, icon_rect,
       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
 
-  // Value text (center)
+  // Value — Inter Black 20px, white, centered below icon
   if (d->value_str[0]) {
-    graphics_context_set_text_color(ctx, GColorWhite);
+    GFont vfont = s_value_font ? s_value_font
+                               : fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+    graphics_context_set_text_color(ctx, CLR_TEXT_INVERTED);
     GRect val_rect = GRect(0, 20, w, 22);
-    graphics_draw_text(ctx, d->value_str,
-      fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+    graphics_draw_text(ctx, d->value_str, vfont,
       val_rect, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
 
-  // Unit text (below value)
+  // Unit — Inter Black 10px, text/subtle (#AAFFFF)
   if (d->unit_str[0]) {
-    graphics_context_set_text_color(ctx, GColorMediumAquamarine);
-    GRect unit_rect = GRect(0, 40, w, 14);
-    graphics_draw_text(ctx, d->unit_str,
-      fonts_get_system_font(FONT_KEY_GOTHIC_14),
+    GFont ufont = s_unit_font ? s_unit_font
+                              : fonts_get_system_font(FONT_KEY_GOTHIC_14);
+    graphics_context_set_text_color(ctx, CLR_TEXT_SUBTLE);
+    GRect unit_rect = GRect(0, 42, w, 12);
+    graphics_draw_text(ctx, d->unit_str, ufont,
       unit_rect, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
 }
@@ -532,7 +556,7 @@ static void update_display_simple(void) {
     text_layer_set_text(s_simple_bt_layer,
       connected ? ICON_BT_CONNECTED : ICON_BT_DISCONNECTED);
     text_layer_set_text_color(s_simple_bt_layer,
-      connected ? GColorCyan : GColorRed);
+      connected ? CLR_ICON_DEFAULT : CLR_STATE_DANGER);
   }
 }
 
@@ -559,7 +583,7 @@ static void update_display_dashboard(void) {
     text_layer_set_text(s_dash_bt_layer,
       connected ? ICON_BT_CONNECTED : ICON_BT_DISCONNECTED);
     text_layer_set_text_color(s_dash_bt_layer,
-      connected ? GColorCyan : GColorRed);
+      connected ? CLR_ICON_DEFAULT : CLR_STATE_DANGER);
   }
 
   // CGM panel
@@ -568,7 +592,8 @@ static void update_display_dashboard(void) {
   GColor cgm_color = stale ? GColorLightGray : zone_color(zone);
 
   if (s_dash_trend_layer) {
-    text_layer_set_text(s_dash_trend_layer, trend_icon((GlucoseTrend)s_trend));
+    const char *t_icon = trend_icon((GlucoseTrend)s_trend);
+    text_layer_set_text(s_dash_trend_layer, t_icon ? t_icon : "");
     text_layer_set_text_color(s_dash_trend_layer, cgm_color);
   }
 
@@ -864,15 +889,16 @@ void prv_layout_for_bounds(GRect bounds) {
         }
       }
 
-      // Digit layers: 2-row time centered on screen (228px tall).
-      // 64px font needs 70px box to avoid glyph clipping.
-      // Row1 top at y=46, row2 at y=112 → pair centered at y=114.
+      // Digit layers: 2-row time centered on screen (200px wide, 228px tall).
+      // H1 right-aligned, H2 left-aligned → 12px horizontal overlap (Figma: gap=-12px).
+      // H1 frame right=106, H2 frame left=94 → overlap=12, pair centered at x=100.
+      // Row 2 starts 8px above Row 1 bottom (Figma: row gap=-8px).
       if (!compact) {
         GRect digit_frames[4] = {
-          GRect(28,  46, 68, 70),   // H1
-          GRect(100, 46, 68, 70),   // H2
-          GRect(28,  112, 68, 70),  // M1
-          GRect(100, 112, 68, 70)   // M2
+          GRect(38,  46,  68, 70),  // H1 — right-aligned, right edge at x=106
+          GRect(94,  46,  68, 70),  // H2 — left-aligned,  left edge  at x=94 (12px overlap)
+          GRect(38,  108, 68, 70),  // M1 — right-aligned (row top = 46+70-8 = 108)
+          GRect(94,  108, 68, 70)   // M2 — left-aligned
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i]) {
@@ -1051,20 +1077,30 @@ static void main_window_load(Window *window) {
   // Load custom fonts
   s_time_font   = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_TIME_DIGITS_64));
   s_symbol_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_16));
+  s_value_font  = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_VALUE_20));
+  s_unit_font   = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_UNIT_10));
 
   // ── Simple: 4 digit TextLayers (added first so slots render on top) ──
+  // Colors per Figma: H1=text/subtle, H2=text/inverted, M1=text/inverted, M2=text/default
   GColor digit_colors[4] = {
-    GColorMediumAquamarine,  // H1
-    GColorWhite,             // H2
-    GColorWhite,             // M1
-    GColorCyan               // M2
+    CLR_TEXT_SUBTLE,    // H1 — #AAFFFF text/subtle
+    CLR_TEXT_INVERTED,  // H2 — #FFFFFF text/inverted
+    CLR_TEXT_INVERTED,  // M1 — #FFFFFF text/inverted
+    CLR_TEXT_DEFAULT    // M2 — #00FFFF text/default
+  };
+  // H1/M1 right-aligned, H2/M2 left-aligned to create 12px overlap (Figma: gap=-12px)
+  GTextAlignment digit_aligns[4] = {
+    GTextAlignmentRight,  // H1
+    GTextAlignmentLeft,   // H2
+    GTextAlignmentRight,  // M1
+    GTextAlignmentLeft    // M2
   };
   for (int i = 0; i < 4; i++) {
     s_simple_digit[i] = text_layer_create(GRect(0, 0, 68, 70));
     text_layer_set_background_color(s_simple_digit[i], GColorClear);
     text_layer_set_text_color(s_simple_digit[i], digit_colors[i]);
     if (s_time_font) text_layer_set_font(s_simple_digit[i], s_time_font);
-    text_layer_set_text_alignment(s_simple_digit[i], GTextAlignmentCenter);
+    text_layer_set_text_alignment(s_simple_digit[i], digit_aligns[i]);
     text_layer_set_text(s_simple_digit[i], "0");
     layer_add_child(s_window_layer, text_layer_get_layer(s_simple_digit[i]));
   }
@@ -1079,14 +1115,14 @@ static void main_window_load(Window *window) {
   // ── Simple: status + date ──
   s_simple_bt_layer = text_layer_create(GRect(92, 4, 16, 16));
   text_layer_set_background_color(s_simple_bt_layer, GColorClear);
-  text_layer_set_text_color(s_simple_bt_layer, GColorCyan);
+  text_layer_set_text_color(s_simple_bt_layer, CLR_ICON_DEFAULT);
   if (s_symbol_font) text_layer_set_font(s_simple_bt_layer, s_symbol_font);
   text_layer_set_text_alignment(s_simple_bt_layer, GTextAlignmentCenter);
   layer_add_child(s_window_layer, text_layer_get_layer(s_simple_bt_layer));
 
   s_simple_music_layer = text_layer_create(GRect(92, 208, 16, 16));
   text_layer_set_background_color(s_simple_music_layer, GColorClear);
-  text_layer_set_text_color(s_simple_music_layer, GColorCyan);
+  text_layer_set_text_color(s_simple_music_layer, CLR_ICON_SUBTLE);
   if (s_symbol_font) text_layer_set_font(s_simple_music_layer, s_symbol_font);
   text_layer_set_text_alignment(s_simple_music_layer, GTextAlignmentCenter);
   text_layer_set_text(s_simple_music_layer, ICON_MUSIC);
@@ -1094,14 +1130,14 @@ static void main_window_load(Window *window) {
 
   s_simple_day_layer = text_layer_create(GRect(4, 106, 18, 16));
   text_layer_set_background_color(s_simple_day_layer, GColorClear);
-  text_layer_set_text_color(s_simple_day_layer, GColorMediumAquamarine);
+  text_layer_set_text_color(s_simple_day_layer, CLR_TEXT_SUBTLE);
   text_layer_set_font(s_simple_day_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_simple_day_layer, GTextAlignmentRight);
   layer_add_child(s_window_layer, text_layer_get_layer(s_simple_day_layer));
 
   s_simple_month_layer = text_layer_create(GRect(178, 106, 18, 16));
   text_layer_set_background_color(s_simple_month_layer, GColorClear);
-  text_layer_set_text_color(s_simple_month_layer, GColorMediumAquamarine);
+  text_layer_set_text_color(s_simple_month_layer, CLR_TEXT_SUBTLE);
   text_layer_set_font(s_simple_month_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_simple_month_layer, GTextAlignmentLeft);
   layer_add_child(s_window_layer, text_layer_get_layer(s_simple_month_layer));
@@ -1117,21 +1153,21 @@ static void main_window_load(Window *window) {
 
   s_dash_bt_layer = text_layer_create(GRect(4, 80, 16, 16));
   text_layer_set_background_color(s_dash_bt_layer, GColorClear);
-  text_layer_set_text_color(s_dash_bt_layer, GColorCyan);
+  text_layer_set_text_color(s_dash_bt_layer, CLR_ICON_DEFAULT);
   if (s_symbol_font) text_layer_set_font(s_dash_bt_layer, s_symbol_font);
   text_layer_set_text_alignment(s_dash_bt_layer, GTextAlignmentCenter);
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_bt_layer));
 
   s_dash_day_layer = text_layer_create(GRect(176, 74, 20, 14));
   text_layer_set_background_color(s_dash_day_layer, GColorClear);
-  text_layer_set_text_color(s_dash_day_layer, GColorMediumAquamarine);
+  text_layer_set_text_color(s_dash_day_layer, CLR_TEXT_SUBTLE);
   text_layer_set_font(s_dash_day_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_dash_day_layer, GTextAlignmentRight);
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_day_layer));
 
   s_dash_month_layer = text_layer_create(GRect(176, 94, 20, 14));
   text_layer_set_background_color(s_dash_month_layer, GColorClear);
-  text_layer_set_text_color(s_dash_month_layer, GColorMediumAquamarine);
+  text_layer_set_text_color(s_dash_month_layer, CLR_TEXT_SUBTLE);
   text_layer_set_font(s_dash_month_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_dash_month_layer, GTextAlignmentRight);
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_month_layer));
@@ -1219,6 +1255,8 @@ static void main_window_unload(Window *window) {
   // Custom fonts
   if (s_time_font)   { fonts_unload_custom_font(s_time_font);   s_time_font   = NULL; }
   if (s_symbol_font) { fonts_unload_custom_font(s_symbol_font); s_symbol_font = NULL; }
+  if (s_value_font)  { fonts_unload_custom_font(s_value_font);  s_value_font  = NULL; }
+  if (s_unit_font)   { fonts_unload_custom_font(s_unit_font);   s_unit_font   = NULL; }
 
   health_service_events_unsubscribe();
   unobstructed_area_service_unsubscribe();

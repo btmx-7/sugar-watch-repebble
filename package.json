@@ -55,6 +55,22 @@
           "characterRegex": "[\ue59a\uebdc\ue87d\ue536\ue405\uf172\uf6c4\ue2bd\uf61f\ue818\ue028\ue6e1\ue5c4\ue5d8\ue81a\ue5c8\ue5db\ue5c5\ue9e4\uf898]",
           "trackingAdjust": 0,
           "size": 16
+        },
+        {
+          "type": "font",
+          "name": "DATA_VALUE_20",
+          "file": "fonts/Inter_18pt-Black.ttf",
+          "characterRegex": "[-0-9.k]",
+          "trackingAdjust": 0,
+          "size": 20
+        },
+        {
+          "type": "font",
+          "name": "DATA_UNIT_10",
+          "file": "fonts/Inter_18pt-Black.ttf",
+          "characterRegex": "[\u00b0CmgdLbp%stekou/l]",
+          "trackingAdjust": 0,
+          "size": 10
         }
       ]
     },
