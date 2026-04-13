@@ -15,7 +15,7 @@ artifacts:
       - **What Changes**: Bullet list of changes. Be specific about new capabilities,
         modifications, or removals.
       - **Platform Targets**: Which Pebble platforms this change affects:
-        - Time 2 (basalt-plus): 200x228 color e-paper
+        - Time 2 (emery): 200x228 color e-paper
         - Round 2 (gabbro): 260x260 circular color e-paper
         - Both (preferred for contest submissions targeting team judging)
       - **Quick View Impact**: Does this change affect Quick View (compact mode)?
@@ -134,7 +134,7 @@ artifacts:
 
       **Platform Dimensions**
       State the canvas size for each target platform:
-      - Time 2 (basalt-plus): 200 x 228 px, color e-paper, rectangular
+      - Time 2 (emery): 200 x 228 px, color e-paper, rectangular
       - Round 2 (gabbro): 260 x 260 px, circular clip, color e-paper
         Note for Round 2: corners are clipped by the circular bezel. Design
         within the inscribed circle. Avoid placing important content in corners.
@@ -153,7 +153,7 @@ artifacts:
 
       **Font Reference**
       List every font constant used, with its pixel height:
-      e.g., FONT_KEY_LECO_42_BOLD_NUMBERS (~54px), FONT_KEY_GOTHIC_28_BOLD (~28px),
+      e.g., FONT_KEY_LECO_42_NUMBERS (~54px), FONT_KEY_GOTHIC_28_BOLD (~28px),
       FONT_KEY_GOTHIC_24_BOLD (~24px), FONT_KEY_GOTHIC_18_BOLD (~18px),
       FONT_KEY_GOTHIC_14 (~14px).
 
@@ -292,7 +292,7 @@ apply:
       → add to parent layer → destroy in window_unload (reverse order)
     - Custom drawing layers: register layer_set_update_proc immediately after creation
     - Buffer sizing: always calculate worst-case string length + null terminator
-    - Font constants: FONT_KEY_* prefix (e.g., FONT_KEY_LECO_42_BOLD_NUMBERS)
+    - Font constants: FONT_KEY_* prefix (e.g., FONT_KEY_LECO_42_NUMBERS)
     - GRect: GRect(x, y, width, height) where y=0 is top of screen
     - GColor constants: GColorGreen, GColorRed, GColorChromeYellow, GColorOrange,
       GColorWhite, GColorBlack, GColorLightGray, GColorDarkGray, GColorMintGreen

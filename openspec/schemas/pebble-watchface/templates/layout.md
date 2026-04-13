@@ -2,7 +2,7 @@
 
 <!-- Delete platforms not targeted by this change. -->
 
-### Time 2 (basalt-plus)
+### Time 2 (emery)
 Canvas: 200 x 228 px, rectangular, color e-paper.
 
 ### Round 2 (gabbro)
@@ -39,7 +39,7 @@ Note: corners are clipped. Keep critical content within the central 200px diamet
 
 | Layer name | Type | Font | Frame (x, y, w, h) | Alignment | Default color |
 |---|---|---|---|---|---|
-| s_glucose_layer | TextLayer | FONT_KEY_LECO_42_BOLD_NUMBERS | GRect(<!--x,y,w,h-->) | Center | GColorWhite |
+| s_glucose_layer | TextLayer | FONT_KEY_LECO_42_NUMBERS | GRect(<!--x,y,w,h-->) | Center | GColorWhite |
 | s_trend_layer | TextLayer | FONT_KEY_GOTHIC_28_BOLD | GRect(<!--x,y,w,h-->) | Right | GColorWhite |
 | <!-- name --> | <!-- type --> | <!-- font --> | GRect(<!--x,y,w,h-->) | <!-- align --> | <!-- color --> |
 
@@ -49,7 +49,7 @@ Note: corners are clipped. Keep critical content within the central 200px diamet
 
 | Constant | Approx height | Used for |
 |---|---|---|
-| FONT_KEY_LECO_42_BOLD_NUMBERS | ~54 px | Glucose hero value |
+| FONT_KEY_LECO_42_NUMBERS | ~54 px | Glucose hero value |
 | FONT_KEY_GOTHIC_28_BOLD | ~28 px | Trend arrow |
 | FONT_KEY_GOTHIC_24_BOLD | ~24 px | Delta value |
 | FONT_KEY_GOTHIC_14 | ~14 px | Freshness, secondary text |

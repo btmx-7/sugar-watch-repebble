@@ -3,7 +3,7 @@
 ## 1. Constants and fonts
 
 <!-- Update FONT_KEY_* constants, zone y-coordinate defines, GRect frame values. -->
-- [ ] 1.1 <!-- e.g., "Update glucose font constant to FONT_KEY_LECO_42_BOLD_NUMBERS" -->
+- [ ] 1.1 <!-- e.g., "Update glucose font constant to FONT_KEY_LECO_42_NUMBERS" -->
 - [ ] 1.2 <!-- e.g., "Update hero zone height define to 58px" -->
 
 ## 2. Layer changes

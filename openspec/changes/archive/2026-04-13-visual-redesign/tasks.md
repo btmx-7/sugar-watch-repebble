@@ -5,7 +5,7 @@ All changes are isolated to `src/c/main.c`.
 ## Task 1: Promote glucose font to LECO_42
 
 In `main_window_load`, change the glucose layer font from `FONT_KEY_LECO_38_BOLD_NUMBERS`
-to `FONT_KEY_LECO_42_BOLD_NUMBERS`.
+to `FONT_KEY_LECO_42_NUMBERS`.
 
 Update the layer height to match: the 42px font needs ~54px of vertical clearance (font
 height + descender). Current layer is h=52, update to h=56.

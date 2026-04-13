@@ -15,7 +15,7 @@ context: |
   - resources/: fonts and images
 
   Target platforms:
-  - Time 2 (basalt-plus): 200x228 px, color e-paper, rectangular
+  - Time 2 (emery): 200x228 px, color e-paper, rectangular
   - Round 2 (gabbro): 260x260 px, circular clip, color e-paper
 
   Pebble SDK patterns used in this project:
@@ -28,7 +28,7 @@ context: |
   - AppMessage for phone-to-watch data transfer (glucose readings)
 
   Font system (used in this project):
-  - FONT_KEY_LECO_38_BOLD_NUMBERS / FONT_KEY_LECO_42_BOLD_NUMBERS: large numbers
+  - FONT_KEY_LECO_38_BOLD_NUMBERS / FONT_KEY_LECO_42_NUMBERS: large numbers
   - FONT_KEY_GOTHIC_28_BOLD: medium bold text
   - FONT_KEY_GOTHIC_24_BOLD: secondary values
   - FONT_KEY_GOTHIC_18_BOLD: labels

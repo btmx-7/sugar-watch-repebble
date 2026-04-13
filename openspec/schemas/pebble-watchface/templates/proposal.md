@@ -10,7 +10,7 @@
 ## Platform Targets
 
 <!-- Check all that apply. Delete the ones that don't apply. -->
-- [ ] Time 2 (basalt-plus) - 200x228 px, color e-paper, rectangular
+- [ ] Time 2 (emery) - 200x228 px, color e-paper, rectangular
 - [ ] Round 2 (gabbro) - 260x260 px, circular clip, color e-paper
 
 ## Quick View Impact
