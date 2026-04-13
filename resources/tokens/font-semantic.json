@@ -1,0 +1,71 @@
+{
+  "fileName": "⌚️ SugarWatch Watchface - rePebble",
+  "textStyles": [
+    {
+      "name": "font-semantic/date",
+      "fontFamily": "Inter",
+      "fontWeight": "Bold",
+      "fontSize": 14,
+      "letterSpacing": {
+        "unit": "PIXELS",
+        "value": -0.5
+      },
+      "textCase": "ORIGINAL"
+    },
+    {
+      "name": "font-semantic/time/simple",
+      "fontFamily": "Inter",
+      "fontWeight": "Black",
+      "fontSize": 80,
+      "letterSpacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "textCase": "ORIGINAL"
+    },
+    {
+      "name": "font-semantic/time/dashboard",
+      "fontFamily": "Inter",
+      "fontWeight": "Black",
+      "fontSize": 56,
+      "letterSpacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "textCase": "ORIGINAL"
+    },
+    {
+      "name": "font-semantic/data/small",
+      "fontFamily": "Inter",
+      "fontWeight": "Semi Bold",
+      "fontSize": 8,
+      "letterSpacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "textCase": "ORIGINAL"
+    },
+    {
+      "name": "font-semantic/data/medium",
+      "fontFamily": "Inter",
+      "fontWeight": "Semi Bold",
+      "fontSize": 12,
+      "letterSpacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "textCase": "ORIGINAL"
+    },
+    {
+      "name": "font-semantic/data/large",
+      "fontFamily": "Inter",
+      "fontWeight": "Black",
+      "fontSize": 20,
+      "letterSpacing": {
+        "unit": "PIXELS",
+        "value": 0
+      },
+      "textCase": "ORIGINAL"
+    }
+  ]
+}
