@@ -219,6 +219,7 @@ static Layer     *s_slot_layer[4];
 
 // Simple layout specific
 static TextLayer *s_simple_digit[4];   // H1, H2, M1, M2
+static Layer     *s_simple_digit_stroke[4]; // black stroke layers behind H1, H2, M1, M2
 static TextLayer *s_simple_day_layer;
 static TextLayer *s_simple_month_layer;
 static TextLayer *s_simple_bt_layer;
@@ -364,6 +365,35 @@ static void graph_layer_update_proc(Layer *layer, GContext *ctx) {
     }
   }
   #undef VAL_TO_Y
+}
+
+// ─── Hour Digit Stroke ───────────────────────────────────────────────────────
+// Each hour stroke layer covers the same area as its TextLayer, expanded 4px
+// on all sides so the stroke doesn't get clipped at the layer boundary.
+// The text is drawn at inset (4,4) within the layer; stroke passes add ±4px.
+
+typedef struct {
+  char digit;
+  GTextAlignment align;
+} DigitStrokeData;
+
+static void digit_stroke_update_proc(Layer *layer, GContext *ctx) {
+  DigitStrokeData *d = (DigitStrokeData *)layer_get_data(layer);
+  if (!d || !d->digit || !s_time_font) return;
+  char buf[2] = { d->digit, '\0' };
+  GRect b = layer_get_bounds(layer);
+  int tw = b.size.w - 8;  // text rect width inside the 4px expansion
+  int th = b.size.h - 8;  // text rect height
+  static const GPoint offs[] = {
+    {-4, 0}, {4, 0}, {0, -4}, {0, 4},
+    {-4,-4}, {4,-4}, {-4, 4}, {4, 4}
+  };
+  graphics_context_set_text_color(ctx, GColorBlack);
+  for (int j = 0; j < 8; j++) {
+    GRect r = GRect(4 + offs[j].x, 4 + offs[j].y, tw, th);
+    graphics_draw_text(ctx, buf, s_time_font, r,
+                       GTextOverflowModeWordWrap, d->align, NULL);
+  }
 }
 
 // ─── Widget Slot System ──────────────────────────────────────────────────────
@@ -539,6 +569,15 @@ static void update_display_simple(void) {
   if (s_simple_digit[1]) text_layer_set_text(s_simple_digit[1], dig[1]);
   if (s_simple_digit[2]) text_layer_set_text(s_simple_digit[2], dig[2]);
   if (s_simple_digit[3]) text_layer_set_text(s_simple_digit[3], dig[3]);
+
+  // Update stroke layers with new digit characters
+  for (int i = 0; i < 4; i++) {
+    if (s_simple_digit_stroke[i]) {
+      DigitStrokeData *d = (DigitStrokeData *)layer_get_data(s_simple_digit_stroke[i]);
+      if (d) d->digit = dig[i][0];
+      layer_mark_dirty(s_simple_digit_stroke[i]);
+    }
+  }
 
   // Day of month (left side)
   static char s_day_buf[4];
@@ -851,6 +890,10 @@ void prv_layout_for_bounds(GRect bounds) {
     if (s_simple_digit[i])
       layer_set_hidden(text_layer_get_layer(s_simple_digit[i]), !show_simple || compact);
   }
+  for (int i = 0; i < 4; i++) {
+    if (s_simple_digit_stroke[i])
+      layer_set_hidden(s_simple_digit_stroke[i], !show_simple || compact);
+  }
   if (s_simple_day_layer)   layer_set_hidden(text_layer_get_layer(s_simple_day_layer),   !show_simple);
   if (s_simple_month_layer) layer_set_hidden(text_layer_get_layer(s_simple_month_layer), !show_simple);
   if (s_simple_bt_layer)    layer_set_hidden(text_layer_get_layer(s_simple_bt_layer),    !show_simple);
@@ -889,22 +932,31 @@ void prv_layout_for_bounds(GRect bounds) {
         }
       }
 
-      // Digit layers: 2-row time centered on screen (200px wide, 228px tall).
-      // H1 right-aligned, H2 left-aligned → 12px horizontal overlap (Figma: gap=-12px).
-      // H1 frame right=106, H2 frame left=94 → overlap=12, pair centered at x=100.
-      // Row 2 starts 8px above Row 1 bottom (Figma: row gap=-8px).
+      // Digit layers: 2-row time centered on screen (200x228, center=100,114).
+      // semantic/spacing/inverted/xlarge (-12px) horizontal overlap: H1/H2, M1/M2.
+      // semantic/spacing/inverted/large  (-8px)  vertical overlap:  M row over H row.
+      // Each digit: 60x64px. Group: 108x120px centered at (100,114).
       if (!compact) {
         GRect digit_frames[4] = {
-          GRect(38,  46,  68, 70),  // H1 — right-aligned, right edge at x=106
-          GRect(94,  46,  68, 70),  // H2 — left-aligned,  left edge  at x=94 (12px overlap)
-          GRect(38,  108, 68, 70),  // M1 — right-aligned (row top = 46+70-8 = 108)
-          GRect(94,  108, 68, 70)   // M2 — left-aligned
+          GRect(46, 54,  60, 64),  // H1 — right edge at 106
+          GRect(94, 54,  60, 64),  // H2 — left edge at 94 (-12px overlap with H1)
+          GRect(46, 110, 60, 64),  // M1 — top = 110 (-8px overlap with H row)
+          GRect(94, 110, 60, 64)   // M2 — left edge at 94 (-12px overlap with M1)
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i]) {
             layer_set_frame(text_layer_get_layer(s_simple_digit[i]), digit_frames[i]);
           }
         }
+        // Stroke layers: same position as each digit, expanded 4px each side for bleed
+        if (s_simple_digit_stroke[0])
+          layer_set_frame(s_simple_digit_stroke[0], GRect(42,  50,  68, 72));  // H1
+        if (s_simple_digit_stroke[1])
+          layer_set_frame(s_simple_digit_stroke[1], GRect(90,  50,  68, 72));  // H2
+        if (s_simple_digit_stroke[2])
+          layer_set_frame(s_simple_digit_stroke[2], GRect(42,  106, 68, 72));  // M1
+        if (s_simple_digit_stroke[3])
+          layer_set_frame(s_simple_digit_stroke[3], GRect(90,  106, 68, 72));  // M2
       }
 
       // BT icon: top center
@@ -937,16 +989,27 @@ void prv_layout_for_bounds(GRect bounds) {
       }
 
       if (!compact) {
+        // semantic/spacing/inverted/xlarge (-12px) horizontal overlap: H1/H2, M1/M2.
+        // semantic/spacing/inverted/large  (-8px)  vertical overlap:  M row over H row.
+        // Each digit: 60x64px. Group: 108x120px centered at (130,130).
         GRect digit_frames[4] = {
-          GRect(62,  80, 68, 70),   // H1
-          GRect(130, 80, 68, 70),   // H2
-          GRect(62,  146, 68, 70),  // M1
-          GRect(130, 146, 68, 70)   // M2
+          GRect(76,  70,  60, 64),  // H1 — right edge at 136
+          GRect(124, 70,  60, 64),  // H2 — left edge at 124 (-12px overlap with H1)
+          GRect(76,  126, 60, 64),  // M1 — top = 126 (-8px overlap with H row)
+          GRect(124, 126, 60, 64)   // M2 — left edge at 124 (-12px overlap with M1)
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i])
             layer_set_frame(text_layer_get_layer(s_simple_digit[i]), digit_frames[i]);
         }
+        if (s_simple_digit_stroke[0])
+          layer_set_frame(s_simple_digit_stroke[0], GRect(72,  66,  68, 72));  // H1
+        if (s_simple_digit_stroke[1])
+          layer_set_frame(s_simple_digit_stroke[1], GRect(120, 66,  68, 72));  // H2
+        if (s_simple_digit_stroke[2])
+          layer_set_frame(s_simple_digit_stroke[2], GRect(72,  122, 68, 72));  // M1
+        if (s_simple_digit_stroke[3])
+          layer_set_frame(s_simple_digit_stroke[3], GRect(120, 122, 68, 72));  // M2
       }
 
       if (s_simple_bt_layer)
@@ -1080,7 +1143,22 @@ static void main_window_load(Window *window) {
   s_value_font  = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_VALUE_20));
   s_unit_font   = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_UNIT_10));
 
-  // ── Simple: 4 digit TextLayers (added first so slots render on top) ──
+  // ── Simple: digit stroke layers (must be added before fill digits for z-order) ──
+  GTextAlignment stroke_aligns[4] = {
+    GTextAlignmentRight,  // H1
+    GTextAlignmentLeft,   // H2
+    GTextAlignmentRight,  // M1
+    GTextAlignmentLeft    // M2
+  };
+  for (int i = 0; i < 4; i++) {
+    s_simple_digit_stroke[i] = layer_create_with_data(GRect(0, 0, 68, 72), sizeof(DigitStrokeData));
+    DigitStrokeData *d = (DigitStrokeData *)layer_get_data(s_simple_digit_stroke[i]);
+    if (d) { d->digit = '0'; d->align = stroke_aligns[i]; }
+    layer_set_update_proc(s_simple_digit_stroke[i], digit_stroke_update_proc);
+    layer_add_child(s_window_layer, s_simple_digit_stroke[i]);
+  }
+
+  // ── Simple: 4 digit TextLayers (added after stroke layers, before slots) ──
   // Colors per Figma: H1=text/subtle, H2=text/inverted, M1=text/inverted, M2=text/default
   GColor digit_colors[4] = {
     CLR_TEXT_SUBTLE,    // H1 — #AAFFFF text/subtle
@@ -1088,7 +1166,7 @@ static void main_window_load(Window *window) {
     CLR_TEXT_INVERTED,  // M1 — #FFFFFF text/inverted
     CLR_TEXT_DEFAULT    // M2 — #00FFFF text/default
   };
-  // H1/M1 right-aligned, H2/M2 left-aligned to create 12px overlap (Figma: gap=-12px)
+  // H1/M1 right-aligned, H2/M2 left-aligned; 8px horizontal gap between digits
   GTextAlignment digit_aligns[4] = {
     GTextAlignmentRight,  // H1
     GTextAlignmentLeft,   // H2
@@ -1096,7 +1174,7 @@ static void main_window_load(Window *window) {
     GTextAlignmentLeft    // M2
   };
   for (int i = 0; i < 4; i++) {
-    s_simple_digit[i] = text_layer_create(GRect(0, 0, 68, 70));
+    s_simple_digit[i] = text_layer_create(GRect(0, 0, 60, 64));
     text_layer_set_background_color(s_simple_digit[i], GColorClear);
     text_layer_set_text_color(s_simple_digit[i], digit_colors[i]);
     if (s_time_font) text_layer_set_font(s_simple_digit[i], s_time_font);
@@ -1231,6 +1309,9 @@ static void main_window_unload(Window *window) {
   }
 
   // Simple layers
+  for (int i = 0; i < 4; i++) {
+    if (s_simple_digit_stroke[i]) { layer_destroy(s_simple_digit_stroke[i]); s_simple_digit_stroke[i] = NULL; }
+  }
   for (int i = 0; i < 4; i++) {
     if (s_simple_digit[i]) { text_layer_destroy(s_simple_digit[i]); s_simple_digit[i] = NULL; }
   }
