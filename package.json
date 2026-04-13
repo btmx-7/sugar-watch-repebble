@@ -14,7 +14,7 @@
     "weather"
   ],
   "pebble": {
-    "sdkVersion": "4",
+    "sdkVersion": "3",
     "displayName": "Steady",
     "uuid": "552fd91e-ad93-4d0f-ae44-74bc9d3108d6",
     "description": "A polished CGM watchface with two layouts, 4 configurable data slots, and sparkline graph. Glucose, heart rate, steps, weather, and battery at a glance.",
@@ -42,7 +42,7 @@
       "media": [
         {
           "type": "font",
-          "name": "RESOURCE_ID_TIME_DIGITS_64",
+          "name": "TIME_DIGITS_64",
           "file": "fonts/Inter_18pt-Black.ttf",
           "characterRegex": "[0-9]",
           "trackingAdjust": -2,
@@ -50,7 +50,7 @@
         },
         {
           "type": "font",
-          "name": "RESOURCE_ID_MATERIAL_SYMBOLS_16",
+          "name": "MATERIAL_SYMBOLS_16",
           "file": "fonts/MaterialSymbolsRounded_28pt-Medium.ttf",
           "characterRegex": "[\ue59a\uebdc\ue87d\ue536\ue405\uf172\uf6c4\ue2bd\uf61f\ue818\ue028\ue6e1\ue5c4\ue5d8\ue81a\ue5c8\ue5db\ue5c5\ue9e4\uf898]",
           "trackingAdjust": 0,

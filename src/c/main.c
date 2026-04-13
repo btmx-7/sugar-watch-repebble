@@ -434,21 +434,26 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   int w = bounds.size.w;
   int h = bounds.size.h;
-  GRect arc_bounds = GRect(1, 1, w - 2, h - 2);
+  GRect arc_bounds = GRect(2, 2, w - 4, h - 4);
 
-  // Background track arc: 240° starting at 150°
+  // Battery ring: gap at top (30°→330°). All others: gap at bottom (210°→510°).
+  bool is_battery = (d->type == SLOT_BATTERY);
+  int arc_start = is_battery ? 30  : 210;
+  int arc_end   = is_battery ? 330 : 510;
+
+  // Background track arc (300° sweep)
   graphics_context_set_stroke_color(ctx, GColorDarkGray);
   graphics_context_set_stroke_width(ctx, 3);
   graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
-    DEG_TO_TRIGANGLE(150), DEG_TO_TRIGANGLE(390));
+    DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(arc_end));
 
-  // Active arc
+  // Active fill arc
   if (d->value_normalized > 0) {
-    int end_angle = 150 + (d->value_normalized * 240 / 100);
-    if (end_angle > 390) end_angle = 390;
+    int fill_angle = arc_start + (d->value_normalized * 300 / 100);
+    if (fill_angle > arc_end) fill_angle = arc_end;
     graphics_context_set_stroke_color(ctx, GColorCyan);
     graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
-      DEG_TO_TRIGANGLE(150), DEG_TO_TRIGANGLE(end_angle));
+      DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(fill_angle));
   }
 
   // Icon (top center, 16px)
@@ -859,15 +864,15 @@ void prv_layout_for_bounds(GRect bounds) {
         }
       }
 
-      // Digit layers: 2-row time in center
-      // Available between top slots (y=60) and bottom slots (y=168)
-      // Center of 108px gap = y=114, so row1 at y=62, row2 at y=116
+      // Digit layers: 2-row time centered on screen (228px tall).
+      // 64px font needs 70px box to avoid glyph clipping.
+      // Row1 top at y=46, row2 at y=112 → pair centered at y=114.
       if (!compact) {
         GRect digit_frames[4] = {
-          GRect(28,  62, 68, 52),  // H1
-          GRect(100, 62, 68, 52),  // H2
-          GRect(28,  118, 68, 52), // M1
-          GRect(100, 118, 68, 52)  // M2
+          GRect(28,  46, 68, 70),   // H1
+          GRect(100, 46, 68, 70),   // H2
+          GRect(28,  112, 68, 70),  // M1
+          GRect(100, 112, 68, 70)   // M2
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i]) {
@@ -907,10 +912,10 @@ void prv_layout_for_bounds(GRect bounds) {
 
       if (!compact) {
         GRect digit_frames[4] = {
-          GRect(62,  84, 68, 52),   // H1
-          GRect(130, 84, 68, 52),   // H2
-          GRect(62,  140, 68, 52),  // M1
-          GRect(130, 140, 68, 52)   // M2
+          GRect(62,  80, 68, 70),   // H1
+          GRect(130, 80, 68, 70),   // H2
+          GRect(62,  146, 68, 70),  // M1
+          GRect(130, 146, 68, 70)   // M2
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i])
@@ -1047,14 +1052,7 @@ static void main_window_load(Window *window) {
   s_time_font   = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_TIME_DIGITS_64));
   s_symbol_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_16));
 
-  // ── Widget slot layers (shared, 4 total) ──
-  for (int i = 0; i < 4; i++) {
-    s_slot_layer[i] = layer_create_with_data(GRect(0, 0, 56, 56), sizeof(SlotRenderData));
-    layer_set_update_proc(s_slot_layer[i], slot_update_proc);
-    layer_add_child(s_window_layer, s_slot_layer[i]);
-  }
-
-  // ── Simple: 4 digit TextLayers ──
+  // ── Simple: 4 digit TextLayers (added first so slots render on top) ──
   GColor digit_colors[4] = {
     GColorMediumAquamarine,  // H1
     GColorWhite,             // H2
@@ -1062,13 +1060,20 @@ static void main_window_load(Window *window) {
     GColorCyan               // M2
   };
   for (int i = 0; i < 4; i++) {
-    s_simple_digit[i] = text_layer_create(GRect(0, 0, 68, 52));
+    s_simple_digit[i] = text_layer_create(GRect(0, 0, 68, 70));
     text_layer_set_background_color(s_simple_digit[i], GColorClear);
     text_layer_set_text_color(s_simple_digit[i], digit_colors[i]);
     if (s_time_font) text_layer_set_font(s_simple_digit[i], s_time_font);
     text_layer_set_text_alignment(s_simple_digit[i], GTextAlignmentCenter);
     text_layer_set_text(s_simple_digit[i], "0");
     layer_add_child(s_window_layer, text_layer_get_layer(s_simple_digit[i]));
+  }
+
+  // ── Widget slot layers (added after digits so they render on top) ──
+  for (int i = 0; i < 4; i++) {
+    s_slot_layer[i] = layer_create_with_data(GRect(0, 0, 56, 56), sizeof(SlotRenderData));
+    layer_set_update_proc(s_slot_layer[i], slot_update_proc);
+    layer_add_child(s_window_layer, s_slot_layer[i]);
   }
 
   // ── Simple: status + date ──
