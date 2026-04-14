@@ -43,6 +43,7 @@ dkms.conf
 .claude/
 .vscode/
 .envrc
+skills/
 
 # OS
 .DS_Store

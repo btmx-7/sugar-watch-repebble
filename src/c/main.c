@@ -99,38 +99,56 @@ typedef enum {
   SLOT_CGM       = 5
 } SlotType;
 
-// ─── Material Symbols UTF-8 Glyph Constants (task 0.10) ──────────────────────
+// ─── Material Symbols UTF-8 Glyph Constants ─────────────────────────────────
+// Codepoints verified via fonttools extraction from MaterialSymbolsRounded TTF.
 // Each constant is the UTF-8 byte sequence for the Unicode codepoint.
 
 // Trend arrows
-#define ICON_TREND_DOUBLE_UP    "\xee\x97\x98\xee\x97\x98"  // U+E5D8 north x2
-#define ICON_TREND_SINGLE_UP    "\xee\x97\x98"               // U+E5D8 north
-#define ICON_TREND_45_UP        "\xee\xa0\x9a"               // U+E81A trending_up
+#define ICON_TREND_DOUBLE_UP    "\xef\x87\xa0\xef\x87\xa0"  // U+F1E0 north x2
+#define ICON_TREND_SINGLE_UP    "\xee\x97\x98"               // U+E5D8 arrow_upward
+#define ICON_TREND_45_UP        "\xef\x87\xa1"               // U+F1E1 north_east
 #define ICON_TREND_FLAT         "\xee\x97\x88"               // U+E5C8 arrow_forward
-#define ICON_TREND_45_DOWN      "\xee\x97\x85"               // U+E5C5
-#define ICON_TREND_SINGLE_DOWN  "\xee\x97\x9b"               // U+E5DB south
-#define ICON_TREND_DOUBLE_DOWN  "\xee\x97\x9b\xee\x97\x9b"  // U+E5DB south x2
+#define ICON_TREND_45_DOWN      "\xef\x87\xa4"               // U+F1E4 south_east
+#define ICON_TREND_SINGLE_DOWN  "\xef\x87\xa3"               // U+F1E3 south
+#define ICON_TREND_DOUBLE_DOWN  "\xee\xab\x90"               // U+EAD0 keyboard_double_arrow_down
 #define ICON_TREND_NONE         "-"
 
 // Status icons
-#define ICON_BT_CONNECTED       "\xee\x96\x9a"   // U+E59A bluetooth_connected
-#define ICON_BT_DISCONNECTED    "\xee\xaf\x9c"   // U+EBDC bluetooth_disabled
-#define ICON_MUSIC              "\xee\x90\x85"   // U+E405 music_note
+#define ICON_BT_CONNECTED       "\xee\x86\xa8"   // U+E1A8 bluetooth_connected
+#define ICON_BT_DISCONNECTED    "\xee\x86\xa9"   // U+E1A9 bluetooth_disabled
+#define ICON_MUSIC              "\xee\x8e\xa1"   // U+E3A1 music_note
 
-// Slot type icons
+// Slot type icons: heart rate
 #define ICON_HEART_RATE         "\xee\xa1\xbd"   // U+E87D favorite (heart)
+#define ICON_CARDIOLOGY         "\xee\x82\x9c"   // U+E09C cardiology
+#define ICON_PULSE_ALERT        "\xef\x94\x81"   // U+F501 pulse_alert
+
+// Slot type icons: steps
 #define ICON_STEPS              "\xee\x94\xb6"   // U+E536 directions_walk
-#define ICON_BATTERY            "\xee\xa7\xa4"   // U+E9E4 electric_bolt
-#define ICON_BATTERY_FULL       "\xef\xa2\x98"   // U+F898 battery_full
+
+// Slot type icons: battery (level-dependent per Figma)
+#define ICON_BATTERY            "\xee\xb0\x9c"   // U+EC1C electric_bolt
+#define ICON_BATTERY_FULL       "\xee\x86\xa4"   // U+E1A4 battery_full
+#define ICON_BATTERY_ANDROID_1  "\xef\x8c\x8c"   // U+F30C battery_android_1 (low)
+#define ICON_BATTERY_ANDROID_2  "\xef\x8c\x8b"   // U+F30B battery_android_2
+#define ICON_BATTERY_ANDROID_3  "\xef\x8c\x8a"   // U+F30A battery_android_3
+#define ICON_BATTERY_ANDROID_BOLT  "\xef\x8c\x85" // U+F305 battery_android_bolt
+#define ICON_BATTERY_ANDROID_ALERT "\xef\x8c\x86" // U+F306 battery_android_alert
 
 // Weather icons (indices 0-7 match weatherCodeToIconIndex in pkjs)
-#define ICON_WEATHER_SUNNY      "\xef\x85\xb2"   // U+F172 clear_day
-#define ICON_WEATHER_PARTLY     "\xef\x9b\x84"   // U+F6C4 partly_cloudy_day
-#define ICON_WEATHER_CLOUD      "\xee\x8b\xbd"   // U+E2BD cloud
-#define ICON_WEATHER_RAIN       "\xef\x98\x9f"   // U+F61F rainy
-#define ICON_WEATHER_STORM      "\xee\xa0\x98"   // U+E818 thunderstorm
-#define ICON_WEATHER_SNOW       "\xee\x80\xa8"   // U+E028 ac_unit
-#define ICON_WEATHER_FOG        "\xee\x9b\xa1"   // U+E6E1 foggy
+#define ICON_WEATHER_SUNNY      "\xee\xa0\x9a"   // U+E81A sunny
+#define ICON_WEATHER_PARTLY     "\xef\x85\xb2"   // U+F172 partly_cloudy_day
+#define ICON_WEATHER_CLOUD      "\xee\x8a\xbd"   // U+E2BD cloud
+#define ICON_WEATHER_RAIN       "\xef\x85\xb6"   // U+F176 rainy
+#define ICON_WEATHER_STORM      "\xee\xaf\x9b"   // U+EBDB thunderstorm
+#define ICON_WEATHER_SNOW       "\xee\xac\xbb"   // U+EB3B ac_unit
+#define ICON_WEATHER_FOG        "\xee\xa0\x98"   // U+E818 foggy
+#define ICON_WEATHER_RAIN_LIGHT "\xef\x98\x9e"   // U+F61E rainy_light
+#define ICON_WEATHER_COOL       "\xef\x85\xa6"   // U+F166 mode_cool
+#define ICON_WEATHER_ALERT      "\xef\x8f\x8c"   // U+F3CC cloud_alert
+
+// Error/Alert
+#define ICON_ERROR              "\xee\x80\x80"   // U+E000 error
 
 static const char* const s_weather_icons[8] = {
   ICON_WEATHER_SUNNY,   // 0 clear
@@ -152,6 +170,7 @@ typedef struct {
   char        unit_str[8];
   const char *icon_glyph;
   GColor      icon_color;
+  bool        icon_filled;       // true=Filled font, false=Regular font
 } SlotRenderData;
 
 // ─── Settings Struct ─────────────────────────────────────────────────────────
@@ -201,10 +220,11 @@ static AppTimer *s_flash_timer    = NULL;
 static bool      s_flash_on       = false;
 
 // ─── UI Fonts ────────────────────────────────────────────────────────────────
-static GFont s_time_font;    // Inter Black 64px (RESOURCE_ID_TIME_DIGITS_64)
-static GFont s_symbol_font;  // Material Symbols 16px (RESOURCE_ID_MATERIAL_SYMBOLS_16)
-static GFont s_value_font;   // Inter Black 20px (RESOURCE_ID_DATA_VALUE_20)
-static GFont s_unit_font;    // Inter Black 10px (RESOURCE_ID_DATA_UNIT_10)
+static GFont s_time_font;           // Inter Black 64px (RESOURCE_ID_TIME_DIGITS_64)
+static GFont s_symbol_font;         // Material Symbols Filled 16px (RESOURCE_ID_MATERIAL_SYMBOLS_16)
+static GFont s_symbol_font_regular; // Material Symbols Regular 16px (RESOURCE_ID_MATERIAL_SYMBOLS_REGULAR_16)
+static GFont s_value_font;          // Inter Black 20px (RESOURCE_ID_DATA_VALUE_20)
+static GFont s_unit_font;           // Inter Black 10px (RESOURCE_ID_DATA_UNIT_10)
 
 // ─── UI Layers ───────────────────────────────────────────────────────────────
 static Window    *s_main_window;
@@ -408,10 +428,26 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       d->value_normalized = pct;
       snprintf(d->value_str, sizeof(d->value_str), "%d", pct);
       snprintf(d->unit_str,  sizeof(d->unit_str),  "%%");
-      d->icon_glyph  = ICON_BATTERY;
-      d->icon_color  = pct <= 20 ? CLR_STATE_DANGER
-                     : pct <= 50 ? CLR_STATE_WARNING
-                     : CLR_ICON_DEFAULT;
+      d->icon_filled = true;
+      if (bat.is_charging) {
+        d->icon_glyph = ICON_BATTERY_ANDROID_BOLT;
+        d->icon_color = CLR_STATE_POSITIVE;
+      } else if (pct <= 10) {
+        d->icon_glyph = ICON_BATTERY_ANDROID_ALERT;
+        d->icon_color = CLR_STATE_DANGER;
+      } else if (pct <= 25) {
+        d->icon_glyph = ICON_BATTERY_ANDROID_1;
+        d->icon_color = CLR_STATE_WARNING;
+      } else if (pct <= 50) {
+        d->icon_glyph = ICON_BATTERY_ANDROID_2;
+        d->icon_color = CLR_ICON_DEFAULT;
+      } else if (pct <= 75) {
+        d->icon_glyph = ICON_BATTERY_ANDROID_3;
+        d->icon_color = CLR_ICON_DEFAULT;
+      } else {
+        d->icon_glyph = ICON_BATTERY_FULL;
+        d->icon_color = CLR_STATE_POSITIVE;
+      }
       break;
     }
     case SLOT_WEATHER: {
@@ -422,6 +458,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       snprintf(d->unit_str, sizeof(d->unit_str), "\xc2\xb0" "C");  // °C in UTF-8
       uint8_t icon_idx = s_weather_icon < 8 ? s_weather_icon : 7;
       d->icon_glyph = s_weather_icons[icon_idx];
+      d->icon_filled = avail;
       d->icon_color = avail ? CLR_ICON_DEFAULT : CLR_STATE_INACTIVE;
       break;
     }
@@ -433,8 +470,19 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       if (hr > 0) snprintf(d->value_str, sizeof(d->value_str), "%d", hr);
       else        snprintf(d->value_str, sizeof(d->value_str), "--");
       snprintf(d->unit_str, sizeof(d->unit_str), "bpm");
-      d->icon_glyph = ICON_HEART_RATE;
-      d->icon_color = CLR_ICON_SUBTLE;
+      if (hr == 0) {
+        d->icon_glyph = ICON_PULSE_ALERT;
+        d->icon_filled = false;
+        d->icon_color = CLR_STATE_INACTIVE;
+      } else if (hr > 160) {
+        d->icon_glyph = ICON_CARDIOLOGY;
+        d->icon_filled = true;
+        d->icon_color = CLR_ICON_DEFAULT;
+      } else {
+        d->icon_glyph = ICON_HEART_RATE;
+        d->icon_filled = true;
+        d->icon_color = CLR_ICON_SUBTLE;
+      }
       break;
     }
     case SLOT_STEPS: {
@@ -448,7 +496,8 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
         snprintf(d->value_str, sizeof(d->value_str), "%lu", (unsigned long)steps);
       snprintf(d->unit_str, sizeof(d->unit_str), "steps");
       d->icon_glyph = ICON_STEPS;
-      d->icon_color = CLR_ICON_SUBTLE;
+      d->icon_filled = (steps > 0);
+      d->icon_color = (steps > 0) ? CLR_ICON_SUBTLE : CLR_STATE_INACTIVE;
       break;
     }
     case SLOT_CGM: {
@@ -462,8 +511,15 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       else
         format_glucose(d->value_str, sizeof(d->value_str), s_glucose);
       snprintf(d->unit_str, sizeof(d->unit_str), s_settings.use_mmol ? "mmol" : "mg/dL");
-      d->icon_glyph = trend_icon((GlucoseTrend)s_trend);
-      d->icon_color = stale ? CLR_STATE_INACTIVE : zone_color(zone);
+      if (stale || s_glucose == 0) {
+        d->icon_glyph = ICON_ERROR;
+        d->icon_filled = false;
+        d->icon_color = CLR_STATE_INACTIVE;
+      } else {
+        d->icon_glyph = trend_icon((GlucoseTrend)s_trend);
+        d->icon_filled = true;
+        d->icon_color = zone_color(zone);
+      }
       break;
     }
     default:  // SLOT_NONE
@@ -472,6 +528,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       d->unit_str[0]  = '\0';
       d->icon_glyph   = NULL;
       d->icon_color   = GColorClear;
+      d->icon_filled  = false;
       break;
   }
 }
@@ -509,11 +566,16 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   }
 
   // Icon — 16px Material Symbol, top-center (absolute at y=2, 20px tall to prevent clipping)
-  if (d->icon_glyph && s_symbol_font) {
-    graphics_context_set_text_color(ctx, d->icon_color);
-    GRect icon_rect = GRect(0, 2, w, 20);
-    graphics_draw_text(ctx, d->icon_glyph, s_symbol_font, icon_rect,
-      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+  // Select Filled or Regular variant based on slot state
+  if (d->icon_glyph) {
+    GFont icon_font = d->icon_filled ? s_symbol_font : s_symbol_font_regular;
+    if (!icon_font) icon_font = s_symbol_font;  // fallback
+    if (icon_font) {
+      graphics_context_set_text_color(ctx, d->icon_color);
+      GRect icon_rect = GRect(0, 2, w, 20);
+      graphics_draw_text(ctx, d->icon_glyph, icon_font, icon_rect,
+        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    }
   }
 
   // Value — Inter Black 20px, white, centered below icon
@@ -589,13 +651,15 @@ static void update_display_simple(void) {
   snprintf(s_month_buf, sizeof(s_month_buf), "%d", t->tm_mon + 1);
   if (s_simple_month_layer) text_layer_set_text(s_simple_month_layer, s_month_buf);
 
-  // BT icon
+  // BT icon: Filled when connected, Regular when disconnected
   bool connected = connection_service_peek_pebble_app_connection();
   if (s_simple_bt_layer) {
     text_layer_set_text(s_simple_bt_layer,
       connected ? ICON_BT_CONNECTED : ICON_BT_DISCONNECTED);
     text_layer_set_text_color(s_simple_bt_layer,
-      connected ? CLR_ICON_DEFAULT : CLR_STATE_DANGER);
+      connected ? CLR_ICON_DEFAULT : CLR_STATE_DISABLED);
+    GFont bt_font = connected ? s_symbol_font : s_symbol_font_regular;
+    if (bt_font) text_layer_set_font(s_simple_bt_layer, bt_font);
   }
 }
 
@@ -616,13 +680,15 @@ static void update_display_dashboard(void) {
   if (s_dash_day_layer)   text_layer_set_text(s_dash_day_layer,   s_dd_buf);
   if (s_dash_month_layer) text_layer_set_text(s_dash_month_layer, s_mm_buf);
 
-  // BT
+  // BT: Filled when connected, Regular when disconnected
   bool connected = connection_service_peek_pebble_app_connection();
   if (s_dash_bt_layer) {
     text_layer_set_text(s_dash_bt_layer,
       connected ? ICON_BT_CONNECTED : ICON_BT_DISCONNECTED);
     text_layer_set_text_color(s_dash_bt_layer,
-      connected ? CLR_ICON_DEFAULT : CLR_STATE_DANGER);
+      connected ? CLR_ICON_DEFAULT : CLR_STATE_DISABLED);
+    GFont bt_font = connected ? s_symbol_font : s_symbol_font_regular;
+    if (bt_font) text_layer_set_font(s_dash_bt_layer, bt_font);
   }
 
   // CGM panel
@@ -1138,10 +1204,11 @@ static void main_window_load(Window *window) {
   window_set_background_color(window, GColorBlack);
 
   // Load custom fonts
-  s_time_font   = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_TIME_DIGITS_64));
-  s_symbol_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_16));
-  s_value_font  = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_VALUE_20));
-  s_unit_font   = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_UNIT_10));
+  s_time_font           = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_TIME_DIGITS_64));
+  s_symbol_font         = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_16));
+  s_symbol_font_regular = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_REGULAR_16));
+  s_value_font          = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_VALUE_20));
+  s_unit_font           = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_UNIT_10));
 
   // ── Simple: digit stroke layers (must be added before fill digits for z-order) ──
   GTextAlignment stroke_aligns[4] = {
@@ -1335,7 +1402,8 @@ static void main_window_unload(Window *window) {
 
   // Custom fonts
   if (s_time_font)   { fonts_unload_custom_font(s_time_font);   s_time_font   = NULL; }
-  if (s_symbol_font) { fonts_unload_custom_font(s_symbol_font); s_symbol_font = NULL; }
+  if (s_symbol_font)         { fonts_unload_custom_font(s_symbol_font);         s_symbol_font         = NULL; }
+  if (s_symbol_font_regular) { fonts_unload_custom_font(s_symbol_font_regular); s_symbol_font_regular = NULL; }
   if (s_value_font)  { fonts_unload_custom_font(s_value_font);  s_value_font  = NULL; }
   if (s_unit_font)   { fonts_unload_custom_font(s_unit_font);   s_unit_font   = NULL; }
 
@@ -1363,6 +1431,35 @@ static void init(void) {
   if (persist_exists(PERSIST_SLOT_3))      s_settings.slots[3]     = (SlotType)persist_read_int(PERSIST_SLOT_3);
   if (persist_exists(PERSIST_WEATHER_TMP)) s_weather_temp          = (int8_t)persist_read_int(PERSIST_WEATHER_TMP);
   if (persist_exists(PERSIST_WEATHER_ICN)) s_weather_icon          = (uint8_t)persist_read_int(PERSIST_WEATHER_ICN);
+
+#ifdef DEMO_DATA
+  // Override with demo values for visual testing of all widget modules
+  s_glucose       = 120;
+  s_trend         = TREND_FLAT;
+  s_delta         = 2;
+  s_last_read_sec = time(NULL) - 180;  // 3 min ago (not stale)
+  s_weather_temp  = 10;
+  s_weather_icon  = 0;  // sunny
+  s_heart_rate    = 128;
+  s_step_count    = 6842;
+
+  s_settings.use_mmol    = false;
+  s_settings.high_thresh = 180;
+  s_settings.low_thresh  = 70;
+  s_settings.urgent_high = 250;
+  s_settings.urgent_low  = 55;
+  s_settings.layout      = LAYOUT_SIMPLE;
+  s_settings.slots[0]    = SLOT_WEATHER;     // TL
+  s_settings.slots[1]    = SLOT_BATTERY;     // TR
+  s_settings.slots[2]    = SLOT_CGM;         // BL
+  s_settings.slots[3]    = SLOT_HEART_RATE;  // BR
+
+  // Demo graph data (gentle wave around 120-160 mg/dL, stored as value/2)
+  s_graph_count = GRAPH_POINTS;
+  for (int i = 0; i < GRAPH_POINTS; i++) {
+    s_graph_data[i] = (uint8_t)(60 + (i % 7) * 5);  // 120-150 mg/dL range
+  }
+#endif
 
   s_main_window = window_create();
   window_set_background_color(s_main_window, GColorBlack);
