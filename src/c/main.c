@@ -999,30 +999,31 @@ void prv_layout_for_bounds(GRect bounds) {
       }
 
       // Digit layers: 2-row time centered on screen (200x228, center=100,114).
-      // semantic/spacing/inverted/xlarge (-12px) horizontal overlap: H1/H2, M1/M2.
-      // semantic/spacing/inverted/large  (-8px)  vertical overlap:  M row over H row.
-      // Each digit: 60x64px. Group: 108x120px centered at (100,114).
+      // Box 48x70 (tight to glyph width, safe for widest digits). H overlap -2, V overlap -28.
+      // Horizontally centered, vertically top-anchored → shared baseline at equal Y.
+      // Group: 94x112px, top-left (53, 58).
+      // Z-order: stroke+fill interleaved per digit (H1, H2, M1, M2). Minute row on top.
       if (!compact) {
         GRect digit_frames[4] = {
-          GRect(46, 54,  60, 64),  // H1 — right edge at 106
-          GRect(94, 54,  60, 64),  // H2 — left edge at 94 (-12px overlap with H1)
-          GRect(46, 110, 60, 64),  // M1 — top = 110 (-8px overlap with H row)
-          GRect(94, 110, 60, 64)   // M2 — left edge at 94 (-12px overlap with M1)
+          GRect(53, 58,  48, 70),  // H1
+          GRect(99, 58,  48, 70),  // H2
+          GRect(53, 100, 48, 70),  // M1
+          GRect(99, 100, 48, 70)   // M2
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i]) {
             layer_set_frame(text_layer_get_layer(s_simple_digit[i]), digit_frames[i]);
           }
         }
-        // Stroke layers: same position as each digit, expanded 4px each side for bleed
+        // Stroke layers: fill frame expanded ±4px (56x78).
         if (s_simple_digit_stroke[0])
-          layer_set_frame(s_simple_digit_stroke[0], GRect(42,  50,  68, 72));  // H1
+          layer_set_frame(s_simple_digit_stroke[0], GRect(49, 54, 56, 78));  // H1
         if (s_simple_digit_stroke[1])
-          layer_set_frame(s_simple_digit_stroke[1], GRect(90,  50,  68, 72));  // H2
+          layer_set_frame(s_simple_digit_stroke[1], GRect(95, 54, 56, 78));  // H2
         if (s_simple_digit_stroke[2])
-          layer_set_frame(s_simple_digit_stroke[2], GRect(42,  106, 68, 72));  // M1
+          layer_set_frame(s_simple_digit_stroke[2], GRect(49, 96, 56, 78));  // M1
         if (s_simple_digit_stroke[3])
-          layer_set_frame(s_simple_digit_stroke[3], GRect(90,  106, 68, 72));  // M2
+          layer_set_frame(s_simple_digit_stroke[3], GRect(95, 96, 56, 78));  // M2
       }
 
       // BT icon: top center
@@ -1055,27 +1056,27 @@ void prv_layout_for_bounds(GRect bounds) {
       }
 
       if (!compact) {
-        // semantic/spacing/inverted/xlarge (-12px) horizontal overlap: H1/H2, M1/M2.
-        // semantic/spacing/inverted/large  (-8px)  vertical overlap:  M row over H row.
-        // Each digit: 60x64px. Group: 108x120px centered at (130,130).
+        // Box 48x70. H overlap -2, V overlap -28. Horizontally centered,
+        // vertically top-anchored (shared baseline across all 4 digits).
+        // Group: 94x112px centered at (130,130), top-left (83, 74).
         GRect digit_frames[4] = {
-          GRect(76,  70,  60, 64),  // H1 — right edge at 136
-          GRect(124, 70,  60, 64),  // H2 — left edge at 124 (-12px overlap with H1)
-          GRect(76,  126, 60, 64),  // M1 — top = 126 (-8px overlap with H row)
-          GRect(124, 126, 60, 64)   // M2 — left edge at 124 (-12px overlap with M1)
+          GRect(83,  74,  48, 70),  // H1
+          GRect(129, 74,  48, 70),  // H2
+          GRect(83,  116, 48, 70),  // M1
+          GRect(129, 116, 48, 70)   // M2
         };
         for (int i = 0; i < 4; i++) {
           if (s_simple_digit[i])
             layer_set_frame(text_layer_get_layer(s_simple_digit[i]), digit_frames[i]);
         }
         if (s_simple_digit_stroke[0])
-          layer_set_frame(s_simple_digit_stroke[0], GRect(72,  66,  68, 72));  // H1
+          layer_set_frame(s_simple_digit_stroke[0], GRect(79,  70,  56, 78));  // H1
         if (s_simple_digit_stroke[1])
-          layer_set_frame(s_simple_digit_stroke[1], GRect(120, 66,  68, 72));  // H2
+          layer_set_frame(s_simple_digit_stroke[1], GRect(125, 70,  56, 78));  // H2
         if (s_simple_digit_stroke[2])
-          layer_set_frame(s_simple_digit_stroke[2], GRect(72,  122, 68, 72));  // M1
+          layer_set_frame(s_simple_digit_stroke[2], GRect(79,  112, 56, 78));  // M1
         if (s_simple_digit_stroke[3])
-          layer_set_frame(s_simple_digit_stroke[3], GRect(120, 122, 68, 72));  // M2
+          layer_set_frame(s_simple_digit_stroke[3], GRect(125, 112, 56, 78));  // M2
       }
 
       if (s_simple_bt_layer)
@@ -1210,38 +1211,33 @@ static void main_window_load(Window *window) {
   s_value_font          = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_VALUE_20));
   s_unit_font           = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_UNIT_10));
 
-  // ── Simple: digit stroke layers (must be added before fill digits for z-order) ──
-  GTextAlignment stroke_aligns[4] = {
-    GTextAlignmentRight,  // H1
-    GTextAlignmentLeft,   // H2
-    GTextAlignmentRight,  // M1
-    GTextAlignmentLeft    // M2
-  };
-  for (int i = 0; i < 4; i++) {
-    s_simple_digit_stroke[i] = layer_create_with_data(GRect(0, 0, 68, 72), sizeof(DigitStrokeData));
-    DigitStrokeData *d = (DigitStrokeData *)layer_get_data(s_simple_digit_stroke[i]);
-    if (d) { d->digit = '0'; d->align = stroke_aligns[i]; }
-    layer_set_update_proc(s_simple_digit_stroke[i], digit_stroke_update_proc);
-    layer_add_child(s_window_layer, s_simple_digit_stroke[i]);
-  }
-
-  // ── Simple: 4 digit TextLayers (added after stroke layers, before slots) ──
-  // Colors per Figma: H1=text/subtle, H2=text/inverted, M1=text/inverted, M2=text/default
+  // ── Simple: per-digit stroke + fill pairs ──
+  // Z-order: each digit's stroke + fill is added as a unit, so H2 stacks on top of H1,
+  // M1 on top of H2, etc. That way outlines are never covered by a neighbor's fill.
+  // Colors per Figma: H1=text/subtle, H2=text/inverted, M1=text/inverted, M2=text/default.
+  // H1/M1 right-aligned, H2/M2 left-aligned.
   GColor digit_colors[4] = {
     CLR_TEXT_SUBTLE,    // H1 — #AAFFFF text/subtle
     CLR_TEXT_INVERTED,  // H2 — #FFFFFF text/inverted
     CLR_TEXT_INVERTED,  // M1 — #FFFFFF text/inverted
     CLR_TEXT_DEFAULT    // M2 — #00FFFF text/default
   };
-  // H1/M1 right-aligned, H2/M2 left-aligned; 8px horizontal gap between digits
   GTextAlignment digit_aligns[4] = {
-    GTextAlignmentRight,  // H1
-    GTextAlignmentLeft,   // H2
-    GTextAlignmentRight,  // M1
-    GTextAlignmentLeft    // M2
+    GTextAlignmentCenter,  // H1
+    GTextAlignmentCenter,  // H2
+    GTextAlignmentCenter,  // M1
+    GTextAlignmentCenter   // M2
   };
   for (int i = 0; i < 4; i++) {
-    s_simple_digit[i] = text_layer_create(GRect(0, 0, 60, 64));
+    // Stroke layer (outline) — added first so fill renders on top of own outline.
+    s_simple_digit_stroke[i] = layer_create_with_data(GRect(0, 0, 56, 78), sizeof(DigitStrokeData));
+    DigitStrokeData *d = (DigitStrokeData *)layer_get_data(s_simple_digit_stroke[i]);
+    if (d) { d->digit = '0'; d->align = digit_aligns[i]; }
+    layer_set_update_proc(s_simple_digit_stroke[i], digit_stroke_update_proc);
+    layer_add_child(s_window_layer, s_simple_digit_stroke[i]);
+
+    // Fill text layer — added right after its stroke, before the next digit's stroke.
+    s_simple_digit[i] = text_layer_create(GRect(0, 0, 48, 70));
     text_layer_set_background_color(s_simple_digit[i], GColorClear);
     text_layer_set_text_color(s_simple_digit[i], digit_colors[i]);
     if (s_time_font) text_layer_set_font(s_simple_digit[i], s_time_font);
