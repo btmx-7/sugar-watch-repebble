@@ -46,6 +46,10 @@
 #define KEY_SLOT_1          14
 #define KEY_SLOT_2          15
 #define KEY_SLOT_3          16
+// Screenshot mock-injection keys — inject HR/Steps from pkjs when HealthService
+// is unavailable (emulator). Safe to remove after screenshot workflow.
+#define KEY_MOCK_HR         19
+#define KEY_MOCK_STEPS      20
 
 // ─── Persistence Keys ────────────────────────────────────────────────────────
 #define PERSIST_GLUCOSE     100
@@ -272,7 +276,7 @@ static GColor zone_color(GlucoseZone zone) {
   switch (zone) {
     case ZONE_URGENT_LOW:  return CLR_STATE_DANGER;
     case ZONE_LOW:         return CLR_STATE_WARNING;
-    case ZONE_IN_RANGE:    return CLR_STATE_POSITIVE;
+    case ZONE_IN_RANGE:    return CLR_ICON_DEFAULT;
     case ZONE_HIGH:        return CLR_STATE_WARNING;
     case ZONE_URGENT_HIGH: return CLR_STATE_DANGER;
     default:               return CLR_STATE_INACTIVE;
@@ -502,7 +506,7 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
       } else {
         d->icon_glyph = ICON_HEART_RATE;
         d->icon_filled = true;
-        d->icon_color = CLR_ICON_SUBTLE;
+        d->icon_color = CLR_ICON_DEFAULT;
       }
       break;
     }
@@ -572,8 +576,11 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   int arc_start = 30;
   int arc_end   = 330;
 
-  // Background track arc — surface/border/subtle (#005555), 6px stroke
-  graphics_context_set_stroke_color(ctx, CLR_BORDER_SUBTLE);
+  // Background track arc — disabled color (#555555) when slot has no data,
+  // border/subtle (#005555) otherwise. 6px stroke.
+  bool slot_has_data = (d->icon_color.argb != CLR_STATE_INACTIVE.argb);
+  GColor track_color = slot_has_data ? CLR_BORDER_SUBTLE : CLR_STATE_DISABLED;
+  graphics_context_set_stroke_color(ctx, track_color);
   graphics_context_set_stroke_width(ctx, 6);
   graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
     DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(arc_end));
@@ -583,14 +590,14 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
                                             DEG_TO_TRIGANGLE(arc_start));
   GPoint track_end_pt   = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
                                             DEG_TO_TRIGANGLE(arc_end));
-  graphics_context_set_fill_color(ctx, CLR_BORDER_SUBTLE);
+  graphics_context_set_fill_color(ctx, track_color);
   graphics_fill_circle(ctx, track_start_pt, 3);
   graphics_fill_circle(ctx, track_end_pt,   3);
 
-  // Gauge finish-point dot — fixed at the 100% endpoint, in the state's color
-  // (d->icon_color reflects battery/heart/steps/CGM state as set in prv_populate_slot_data).
+  // Gauge finish-point dot — fixed at the 100% endpoint, in the state's color.
+  // Only drawn when slot has data; skip for disabled/inactive slots.
   // Drawn before the active arc so a full (100%) fill covers it.
-  {
+  if (slot_has_data) {
     int finish_angle = is_battery ? arc_end : arc_start;
     GPoint finish_pt = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
                                          DEG_TO_TRIGANGLE(finish_angle));
@@ -878,6 +885,8 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   t = dict_find(iter, KEY_SLOT_1); if (t) s_settings.slots[1] = (SlotType)t->value->int32;
   t = dict_find(iter, KEY_SLOT_2); if (t) s_settings.slots[2] = (SlotType)t->value->int32;
   t = dict_find(iter, KEY_SLOT_3); if (t) s_settings.slots[3] = (SlotType)t->value->int32;
+  t = dict_find(iter, KEY_MOCK_HR);    if (t) s_heart_rate  = (int)t->value->int32;
+  t = dict_find(iter, KEY_MOCK_STEPS); if (t) s_step_count  = (uint32_t)t->value->int32;
 
   // Persist
   persist_write_int(PERSIST_GLUCOSE,     s_glucose);
@@ -964,6 +973,11 @@ static void bluetooth_callback(bool connected) {
     VibePattern pat = { .durations = segs, .num_segments = 3 };
     vibes_enqueue_custom_pattern(pat);
   }
+}
+
+static void battery_callback(BatteryChargeState state) {
+  (void)state;
+  update_display();
 }
 
 // ─── Layout Positioning ──────────────────────────────────────────────────────
@@ -1530,6 +1544,8 @@ static void init(void) {
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
   update_time();
 
+  battery_state_service_subscribe(battery_callback);
+
   connection_service_subscribe((ConnectionHandlers){
     .pebble_app_connection_handler = bluetooth_callback
   });
@@ -1542,6 +1558,7 @@ static void init(void) {
 static void deinit(void) {
   if (s_alert_timer) app_timer_cancel(s_alert_timer);
   tick_timer_service_unsubscribe();
+  battery_state_service_unsubscribe();
   connection_service_unsubscribe();
   app_message_deregister_callbacks();
   window_destroy(s_main_window);
