@@ -39,6 +39,8 @@
 #define KEY_URGENT_LOW      9
 #define KEY_WEATHER_TEMP    10
 #define KEY_WEATHER_ICON    11
+#define KEY_WEATHER_TMIN    17
+#define KEY_WEATHER_TMAX    18
 #define KEY_LAYOUT          12
 #define KEY_SLOT_0          13
 #define KEY_SLOT_1          14
@@ -62,6 +64,8 @@
 #define PERSIST_SLOT_3      113
 #define PERSIST_WEATHER_TMP 114
 #define PERSIST_WEATHER_ICN 115
+#define PERSIST_WEATHER_MIN 116
+#define PERSIST_WEATHER_MAX 117
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
@@ -104,12 +108,12 @@ typedef enum {
 // Each constant is the UTF-8 byte sequence for the Unicode codepoint.
 
 // Trend arrows
-#define ICON_TREND_DOUBLE_UP    "\xef\x87\xa0\xef\x87\xa0"  // U+F1E0 north x2
+#define ICON_TREND_DOUBLE_UP    "\xee\xab\x8f"               // U+EACF keyboard_double_arrow_up
 #define ICON_TREND_SINGLE_UP    "\xee\x97\x98"               // U+E5D8 arrow_upward
 #define ICON_TREND_45_UP        "\xef\x87\xa1"               // U+F1E1 north_east
 #define ICON_TREND_FLAT         "\xee\x97\x88"               // U+E5C8 arrow_forward
 #define ICON_TREND_45_DOWN      "\xef\x87\xa4"               // U+F1E4 south_east
-#define ICON_TREND_SINGLE_DOWN  "\xef\x87\xa3"               // U+F1E3 south
+#define ICON_TREND_SINGLE_DOWN  "\xee\x97\x9b"               // U+E5DB arrow_downward
 #define ICON_TREND_DOUBLE_DOWN  "\xee\xab\x90"               // U+EAD0 keyboard_double_arrow_down
 #define ICON_TREND_NONE         "-"
 
@@ -128,12 +132,14 @@ typedef enum {
 
 // Slot type icons: battery (level-dependent per Figma)
 #define ICON_BATTERY            "\xee\xb0\x9c"   // U+EC1C electric_bolt
-#define ICON_BATTERY_FULL       "\xee\x86\xa4"   // U+E1A4 battery_full
-#define ICON_BATTERY_ANDROID_1  "\xef\x8c\x8c"   // U+F30C battery_android_1 (low)
-#define ICON_BATTERY_ANDROID_2  "\xef\x8c\x8b"   // U+F30B battery_android_2
+#define ICON_BATTERY_FULL       "\xee\x86\xa4"   // U+E1A4 battery_full (unused)
+#define ICON_BATTERY_ANDROID_0  "\xef\x8c\x8d"   // U+F30D battery_android_0 (full)
+#define ICON_BATTERY_ANDROID_1  "\xef\x8c\x8c"   // U+F30C battery_android_1 (low, danger)
+#define ICON_BATTERY_ANDROID_2  "\xef\x8c\x8b"   // U+F30B battery_android_2 (warning)
 #define ICON_BATTERY_ANDROID_3  "\xef\x8c\x8a"   // U+F30A battery_android_3
-#define ICON_BATTERY_ANDROID_BOLT  "\xef\x8c\x85" // U+F305 battery_android_bolt
-#define ICON_BATTERY_ANDROID_ALERT "\xef\x8c\x86" // U+F306 battery_android_alert
+#define ICON_BATTERY_ANDROID_5  "\xef\x8c\x88"   // U+F308 battery_android_5
+#define ICON_BATTERY_ANDROID_BOLT  "\xef\x8c\x85" // U+F305 battery_android_bolt (charging)
+#define ICON_BATTERY_ANDROID_ALERT "\xef\x8c\x86" // U+F306 battery_android_alert (unused)
 
 // Weather icons (indices 0-7 match weatherCodeToIconIndex in pkjs)
 #define ICON_WEATHER_SUNNY      "\xee\xa0\x9a"   // U+E81A sunny
@@ -208,16 +214,14 @@ static int32_t s_last_read_sec = 0;
 
 // New sensor data
 static int8_t  s_weather_temp  = -128;  // INT8_MIN = unavailable sentinel
+static int8_t  s_weather_tmin  = -128;  // daily min, -128 = unavailable
+static int8_t  s_weather_tmax  = -128;  // daily max, -128 = unavailable
 static uint8_t s_weather_icon  = 7;     // default cloud
 static int     s_heart_rate    = 0;
 static uint32_t s_step_count   = 0;
 
 // Alert state
 static AppTimer *s_alert_timer    = NULL;
-static bool      s_alert_dismissed = false;
-static time_t    s_dismiss_until   = 0;
-static AppTimer *s_flash_timer    = NULL;
-static bool      s_flash_on       = false;
 
 // ─── UI Fonts ────────────────────────────────────────────────────────────────
 static GFont s_time_font;           // Inter Black 64px (RESOURCE_ID_TIME_DIGITS_64)
@@ -232,7 +236,6 @@ static Layer     *s_window_layer;
 
 // Shared / always present
 static Layer     *s_graph_layer;
-static TextLayer *s_stale_layer;
 
 // Widget slots (4 max; slot[3] hidden in Dashboard)
 static Layer     *s_slot_layer[4];
@@ -433,26 +436,44 @@ static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
         d->icon_glyph = ICON_BATTERY_ANDROID_BOLT;
         d->icon_color = CLR_STATE_POSITIVE;
       } else if (pct <= 10) {
-        d->icon_glyph = ICON_BATTERY_ANDROID_ALERT;
+        // 5%-range: battery_android_1, danger theme
+        d->icon_glyph = ICON_BATTERY_ANDROID_1;
         d->icon_color = CLR_STATE_DANGER;
       } else if (pct <= 25) {
-        d->icon_glyph = ICON_BATTERY_ANDROID_1;
+        // 25%-range: battery_android_2, warning theme
+        d->icon_glyph = ICON_BATTERY_ANDROID_2;
         d->icon_color = CLR_STATE_WARNING;
       } else if (pct <= 50) {
-        d->icon_glyph = ICON_BATTERY_ANDROID_2;
-        d->icon_color = CLR_ICON_DEFAULT;
-      } else if (pct <= 75) {
+        // 50%-range: battery_android_3, default theme
         d->icon_glyph = ICON_BATTERY_ANDROID_3;
         d->icon_color = CLR_ICON_DEFAULT;
+      } else if (pct <= 75) {
+        // 75%-range: battery_android_5, default theme
+        d->icon_glyph = ICON_BATTERY_ANDROID_5;
+        d->icon_color = CLR_ICON_DEFAULT;
       } else {
-        d->icon_glyph = ICON_BATTERY_FULL;
-        d->icon_color = CLR_STATE_POSITIVE;
+        // 100%: battery_android_0 (full), default theme
+        d->icon_glyph = ICON_BATTERY_ANDROID_0;
+        d->icon_color = CLR_ICON_DEFAULT;
       }
       break;
     }
     case SLOT_WEATHER: {
       bool avail = (s_weather_temp != -128);
-      d->value_normalized = 0;  // no arc for weather
+      bool range_avail = avail && (s_weather_tmin != -128) && (s_weather_tmax != -128)
+                              && (s_weather_tmax > s_weather_tmin);
+
+      // Active arc = position of current temp in today's [min, max] range
+      if (range_avail) {
+        int t = s_weather_temp;
+        if (t < s_weather_tmin) t = s_weather_tmin;
+        if (t > s_weather_tmax) t = s_weather_tmax;
+        d->value_normalized = (t - s_weather_tmin) * 100
+                            / (s_weather_tmax - s_weather_tmin);
+      } else {
+        d->value_normalized = 0;
+      }
+
       if (avail) snprintf(d->value_str, sizeof(d->value_str), "%d", (int)s_weather_temp);
       else       snprintf(d->value_str, sizeof(d->value_str), "--");
       snprintf(d->unit_str, sizeof(d->unit_str), "\xc2\xb0" "C");  // °C in UTF-8
@@ -544,40 +565,59 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   // Arc: 50px circle, horizontally centered, bottom-aligned with 2px margin in 56×56 box
   GRect arc_bounds = GRect(3, 4, 50, 50);
 
-  // Battery ring: gap at top (30°→330°). All others: gap at bottom (210°→510°).
+  // All slots: gap at top (30°→330°, 300° span).
+  // Battery fills clockwise from arc_start; all others fill counter-clockwise
+  // from arc_end to preserve their visual direction.
   bool is_battery = (d->type == SLOT_BATTERY);
-  int arc_start = is_battery ? 30  : 210;
-  int arc_end   = is_battery ? 330 : 510;
+  int arc_start = 30;
+  int arc_end   = 330;
 
-  // Background track arc — surface/border/subtle (#005555), 5px stroke
+  // Background track arc — surface/border/subtle (#005555), 6px stroke
   graphics_context_set_stroke_color(ctx, CLR_BORDER_SUBTLE);
-  graphics_context_set_stroke_width(ctx, 5);
+  graphics_context_set_stroke_width(ctx, 6);
   graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
     DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(arc_end));
 
-  // Emulate rounded end caps on the empty arc with 5px filled circles at both endpoints
+  // Emulate rounded end caps on the empty arc with 6px filled circles at both endpoints
   GPoint track_start_pt = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
                                             DEG_TO_TRIGANGLE(arc_start));
   GPoint track_end_pt   = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
                                             DEG_TO_TRIGANGLE(arc_end));
   graphics_context_set_fill_color(ctx, CLR_BORDER_SUBTLE);
-  graphics_fill_circle(ctx, track_start_pt, 2);
-  graphics_fill_circle(ctx, track_end_pt,   2);
+  graphics_fill_circle(ctx, track_start_pt, 3);
+  graphics_fill_circle(ctx, track_end_pt,   3);
 
-  // Active fill arc — icon_color, 2px stroke, with end-dot marker at current fill angle
+  // Gauge finish-point dot — fixed at the 100% endpoint, in the state's color
+  // (d->icon_color reflects battery/heart/steps/CGM state as set in prv_populate_slot_data).
+  // Drawn before the active arc so a full (100%) fill covers it.
+  {
+    int finish_angle = is_battery ? arc_end : arc_start;
+    GPoint finish_pt = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
+                                         DEG_TO_TRIGANGLE(finish_angle));
+    graphics_context_set_fill_color(ctx, d->icon_color);
+    graphics_fill_circle(ctx, finish_pt, 1);
+  }
+
+  // Active fill arc — icon_color, 2px stroke
   if (d->value_normalized > 0) {
-    int fill_angle = arc_start + (d->value_normalized * 300 / 100);
-    if (fill_angle > arc_end) fill_angle = arc_end;
+    int span = d->value_normalized * 300 / 100;
+    if (span > 300) span = 300;
+
+    int fill_start, fill_end;
+    if (is_battery) {
+      // Battery: clockwise from arc_start (30°, top-right), finish at arc_end (330°)
+      fill_start = arc_start;
+      fill_end   = arc_start + span;
+    } else {
+      // Standard: counter-clockwise from arc_end (330°, top-left), finish at arc_start (30°)
+      fill_start = arc_end - span;
+      fill_end   = arc_end;
+    }
+
     graphics_context_set_stroke_color(ctx, d->icon_color);
     graphics_context_set_stroke_width(ctx, 2);
     graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
-      DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(fill_angle));
-
-    // End-dot: 2px filled circle at the fill endpoint, in the active color
-    GPoint fill_end_pt = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
-                                           DEG_TO_TRIGANGLE(fill_angle));
-    graphics_context_set_fill_color(ctx, d->icon_color);
-    graphics_fill_circle(ctx, fill_end_pt, 1);
+      DEG_TO_TRIGANGLE(fill_start), DEG_TO_TRIGANGLE(fill_end));
   }
 
   // Icon — 16px Material Symbol, top-center (absolute at y=2, 20px tall to prevent clipping)
@@ -587,7 +627,7 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
     if (!icon_font) icon_font = s_symbol_font;  // fallback
     if (icon_font) {
       graphics_context_set_text_color(ctx, d->icon_color);
-      GRect icon_rect = GRect(0, 2, w, 20);
+      GRect icon_rect = GRect(0, 0, w, 20);
       graphics_draw_text(ctx, d->icon_glyph, icon_font, icon_rect,
         GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
     }
@@ -608,7 +648,7 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   if (d->value_str[0]) {
     GFont vfont = s_value_font ? s_value_font
                                : fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
-    GRect val_rect = GRect(5, 24, 46, 20);
+    GRect val_rect = GRect(5, 16, 46, 20);
     graphics_context_set_text_color(ctx, GColorBlack);
     for (int i = 0; i < 8; i++) {
       GRect r = GRect(val_rect.origin.x + offs2[i].x,
@@ -622,11 +662,12 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
       GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
 
-  // Unit — Inter Black 10px in 24×10 box at x=16, y=44. 1px black outline.
+  // Unit — Inter Black 10px centered at y=36. Full slot width so strings
+  // like "mg/dL" fit on one row; horizontal center alignment handles layout.
   if (d->unit_str[0]) {
     GFont ufont = s_unit_font ? s_unit_font
                               : fonts_get_system_font(FONT_KEY_GOTHIC_14);
-    GRect unit_rect = GRect(16, 44, 24, 10);
+    GRect unit_rect = GRect(0, 36, w, 10);
     graphics_context_set_text_color(ctx, GColorBlack);
     for (int i = 0; i < 8; i++) {
       GRect r = GRect(unit_rect.origin.x + offs1[i].x,
@@ -769,18 +810,6 @@ static void update_display(void) {
 
   prv_update_all_slots();
 
-  // Update stale row (shared)
-  static char s_stale_buf[32];
-  int32_t mins = minutes_since_last_read();
-  if (mins > 9000)       snprintf(s_stale_buf, sizeof(s_stale_buf), "Waiting for data...");
-  else if (mins < 2)     snprintf(s_stale_buf, sizeof(s_stale_buf), "Just updated");
-  else                   snprintf(s_stale_buf, sizeof(s_stale_buf), "%ld min ago", (long)mins);
-  if (s_stale_layer) {
-    text_layer_set_text(s_stale_layer, s_stale_buf);
-    text_layer_set_text_color(s_stale_layer,
-      data_is_stale() ? GColorRed : GColorDarkGray);
-  }
-
   if (s_graph_layer && s_settings.layout == LAYOUT_DASHBOARD) {
     layer_mark_dirty(s_graph_layer);
   }
@@ -790,65 +819,20 @@ static void update_time(void) {
   update_display();
 }
 
-// ─── Alert Flash System ──────────────────────────────────────────────────────
+// ─── Urgent Vibe Pattern ─────────────────────────────────────────────────────
+// Urgent glucose alerts only vibrate; the screen stays in its normal render
+// (the danger color + trend arrow already signal the state visually).
 
-static void flash_timer_callback(void *context) {
-  GlucoseZone zone = get_zone(s_glucose);
-  bool dismissed = s_alert_dismissed && time(NULL) < s_dismiss_until;
-  bool urgent = !dismissed && (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH);
-
-  if (!urgent) {
-    s_flash_timer = NULL;
-    window_set_background_color(s_main_window, GColorBlack);
-    update_display();
-    return;
-  }
-
-  s_flash_on = !s_flash_on;
-  window_set_background_color(s_main_window,
-    s_flash_on ? zone_color(zone) : GColorBlack);
-  if (!s_flash_on) update_display();
-
-  s_flash_timer = app_timer_register(700, flash_timer_callback, NULL);
-}
-
-static void start_alert_flash(void) {
-  if (s_flash_timer) return;
-  s_flash_on = false;
-  s_flash_timer = app_timer_register(100, flash_timer_callback, NULL);
+static void fire_urgent_vibe(void) {
   static const uint32_t segs[] = { 300, 200, 300, 200, 300 };
   VibePattern pat = { .durations = segs, .num_segments = 5 };
   vibes_enqueue_custom_pattern(pat);
-}
-
-static void stop_alert_flash(void) {
-  if (s_flash_timer) { app_timer_cancel(s_flash_timer); s_flash_timer = NULL; }
-  s_flash_on = false;
-  window_set_background_color(s_main_window, GColorBlack);
-  update_display();
-}
-
-static void dismiss_alert(void) {
-  s_alert_dismissed = true;
-  s_dismiss_until   = time(NULL) + (15 * 60);
-  stop_alert_flash();
 }
 
 // ─── Tick Handler ────────────────────────────────────────────────────────────
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time();
-
-  if (s_alert_dismissed && time(NULL) >= s_dismiss_until) {
-    s_alert_dismissed = false;
-  }
-
-  GlucoseZone zone    = get_zone(s_glucose);
-  bool dismissed      = s_alert_dismissed && time(NULL) < s_dismiss_until;
-  bool urgent         = !dismissed && (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH);
-
-  if (urgent && !s_flash_timer) start_alert_flash();
-  else if (!urgent && s_flash_timer) stop_alert_flash();
 }
 
 // Forward declaration needed by inbox_received_handler
@@ -881,6 +865,12 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   t = dict_find(iter, KEY_WEATHER_ICON);
   if (t) s_weather_icon = (uint8_t)t->value->int32;
 
+  t = dict_find(iter, KEY_WEATHER_TMIN);
+  if (t) s_weather_tmin = (int8_t)t->value->int32;
+
+  t = dict_find(iter, KEY_WEATHER_TMAX);
+  if (t) s_weather_tmax = (int8_t)t->value->int32;
+
   t = dict_find(iter, KEY_LAYOUT);
   if (t) s_settings.layout = (WatchLayout)t->value->int32;
 
@@ -906,11 +896,8 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   persist_write_int(PERSIST_SLOT_3,      (int32_t)s_settings.slots[3]);
   persist_write_int(PERSIST_WEATHER_TMP, (int32_t)s_weather_temp);
   persist_write_int(PERSIST_WEATHER_ICN, (int32_t)s_weather_icon);
-
-  // Reset dismiss when data fresh and in-range
-  if (!data_is_stale() && get_zone(s_glucose) == ZONE_IN_RANGE) {
-    s_alert_dismissed = false;
-  }
+  persist_write_int(PERSIST_WEATHER_MIN, (int32_t)s_weather_tmin);
+  persist_write_int(PERSIST_WEATHER_MAX, (int32_t)s_weather_tmax);
 
   // Reposition layers in case layout changed
   if (s_window_layer) {
@@ -921,18 +908,12 @@ static void inbox_received_handler(DictionaryIterator *iter, void *context) {
   update_display();
 
   GlucoseZone zone = get_zone(s_glucose);
-  bool dismissed   = s_alert_dismissed && time(NULL) < s_dismiss_until;
-  bool urgent      = !dismissed && (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH);
-
-  if (urgent) {
-    start_alert_flash();
-  } else {
-    stop_alert_flash();
-    if (zone == ZONE_LOW || zone == ZONE_HIGH) {
-      static const uint32_t segs[] = { 200, 100, 200 };
-      VibePattern pat = { .durations = segs, .num_segments = 3 };
-      vibes_enqueue_custom_pattern(pat);
-    }
+  if (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH) {
+    fire_urgent_vibe();
+  } else if (zone == ZONE_LOW || zone == ZONE_HIGH) {
+    static const uint32_t segs[] = { 200, 100, 200 };
+    VibePattern pat = { .durations = segs, .num_segments = 3 };
+    vibes_enqueue_custom_pattern(pat);
   }
 }
 
@@ -943,8 +924,8 @@ static void inbox_dropped_handler(AppMessageResult reason, void *context) {
 // ─── Button Handler ──────────────────────────────────────────────────────────
 
 static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
-  GlucoseZone zone = get_zone(s_glucose);
-  if (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH) dismiss_alert();
+  // No-op: urgent alerts no longer flash, so there's nothing to dismiss.
+  (void)recognizer; (void)context;
 }
 
 #ifdef DEMO_DATA
@@ -1027,9 +1008,6 @@ void prv_layout_for_bounds(GRect bounds) {
   // Graph: visible in Dashboard (non-compact), hidden in Simple and compact Dashboard
   bool show_graph = (dashboard && !compact);
   if (s_graph_layer) layer_set_hidden(s_graph_layer, !show_graph);
-
-  // Stale row: always visible
-  if (s_stale_layer) layer_set_hidden(text_layer_get_layer(s_stale_layer), false);
 
   // ── Simple layout positions ───────────────────────────────────────────────
   if (simple) {
@@ -1148,10 +1126,6 @@ void prv_layout_for_bounds(GRect bounds) {
       }
     }
 
-    // Stale row (Simple)
-    if (s_stale_layer)
-      layer_set_frame(text_layer_get_layer(s_stale_layer),
-        GRect(4, h - 18, w - 8, 16));
   }
 
   // ── Dashboard layout positions ────────────────────────────────────────────
@@ -1198,9 +1172,6 @@ void prv_layout_for_bounds(GRect bounds) {
       // Unit
       if (s_dash_unit_layer)
         layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(128, 182, 68, 14));
-      // Stale
-      if (s_stale_layer)
-        layer_set_frame(text_layer_get_layer(s_stale_layer), GRect(4, 212, 192, 14));
 
     } else {
       // R2: 260x260
@@ -1235,8 +1206,6 @@ void prv_layout_for_bounds(GRect bounds) {
         layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(188, 170, 42, 30));
       if (s_dash_unit_layer)
         layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(188, 200, 42, 14));
-      if (s_stale_layer)
-        layer_set_frame(text_layer_get_layer(s_stale_layer), GRect(30, 228, 200, 14));
     }
   }
 
@@ -1402,15 +1371,6 @@ static void main_window_load(Window *window) {
   layer_set_update_proc(s_graph_layer, graph_layer_update_proc);
   layer_add_child(s_window_layer, s_graph_layer);
 
-  // ── Stale row (shared) ──
-  s_stale_layer = text_layer_create(GRect(4, h - 18, w - 8, 16));
-  text_layer_set_background_color(s_stale_layer, GColorClear);
-  text_layer_set_text_color(s_stale_layer, GColorDarkGray);
-  text_layer_set_font(s_stale_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(s_stale_layer, GTextAlignmentCenter);
-  text_layer_set_text(s_stale_layer, "Waiting for data...");
-  layer_add_child(s_window_layer, text_layer_get_layer(s_stale_layer));
-
   // ── Subscribe to UnobstructedArea ──
   UnobstructedAreaHandlers ua = {
     .change     = prv_unobstructed_change,
@@ -1455,7 +1415,6 @@ static void main_window_unload(Window *window) {
 
   // Shared
   if (s_graph_layer) { layer_destroy(s_graph_layer); s_graph_layer = NULL; }
-  if (s_stale_layer) { text_layer_destroy(s_stale_layer); s_stale_layer = NULL; }
 
   // Custom fonts
   if (s_time_font)   { fonts_unload_custom_font(s_time_font);   s_time_font   = NULL; }
@@ -1487,6 +1446,8 @@ static void apply_demo_state(int n) {
                       ? time(NULL) - d->last_read_offset_sec
                       : 0;
   s_weather_temp  = d->weather_temp;
+  s_weather_tmin  = d->weather_tmin;
+  s_weather_tmax  = d->weather_tmax;
   s_weather_icon  = d->weather_icon;
   s_heart_rate    = d->heart_rate;
   s_step_count    = d->step_count;
@@ -1550,6 +1511,8 @@ static void init(void) {
   if (persist_exists(PERSIST_SLOT_3))      s_settings.slots[3]     = (SlotType)persist_read_int(PERSIST_SLOT_3);
   if (persist_exists(PERSIST_WEATHER_TMP)) s_weather_temp          = (int8_t)persist_read_int(PERSIST_WEATHER_TMP);
   if (persist_exists(PERSIST_WEATHER_ICN)) s_weather_icon          = (uint8_t)persist_read_int(PERSIST_WEATHER_ICN);
+  if (persist_exists(PERSIST_WEATHER_MIN)) s_weather_tmin          = (int8_t)persist_read_int(PERSIST_WEATHER_MIN);
+  if (persist_exists(PERSIST_WEATHER_MAX)) s_weather_tmax          = (int8_t)persist_read_int(PERSIST_WEATHER_MAX);
 
 #ifdef DEMO_DATA
   apply_demo_state(DEMO_STATE);
@@ -1577,7 +1540,6 @@ static void init(void) {
 }
 
 static void deinit(void) {
-  if (s_flash_timer) app_timer_cancel(s_flash_timer);
   if (s_alert_timer) app_timer_cancel(s_alert_timer);
   tick_timer_service_unsubscribe();
   connection_service_unsubscribe();

@@ -36,7 +36,9 @@
       "KEY_SLOT_0":         13,
       "KEY_SLOT_1":         14,
       "KEY_SLOT_2":         15,
-      "KEY_SLOT_3":         16
+      "KEY_SLOT_3":         16,
+      "KEY_WEATHER_TMIN":   17,
+      "KEY_WEATHER_TMAX":   18
     },
     "resources": {
       "media": [
@@ -52,7 +54,7 @@
           "type": "font",
           "name": "MATERIAL_SYMBOLS_16",
           "file": "fonts/MaterialSymbolsRounded_Filled_28pt-Medium.ttf",
-          "characterRegex": "[\ue000\ue09c\ue1a4\ue1a7\ue1a8\ue1a9\ue2bd\ue3a1\ue536\ue5c8\ue5d8\ue818\ue81a\ue87d\ue8e5\uead0\ueb3b\uebdb\uec1c\uf157\uf166\uf172\uf176\uf1e0\uf1e1\uf1e3\uf1e4\uf305\uf306\uf30a\uf30b\uf30c\uf3cc\uf501\uf61e]",
+          "characterRegex": "[\ue000\ue09c\ue1a4\ue1a7\ue1a8\ue1a9\ue2bd\ue3a1\ue536\ue5c8\ue5d8\ue5db\ue818\ue81a\ue87d\ue8e5\ueacf\uead0\ueb3b\uebdb\uec1c\uf157\uf166\uf172\uf176\uf1e0\uf1e1\uf1e3\uf1e4\uf305\uf306\uf308\uf30a\uf30b\uf30c\uf30d\uf3cc\uf501\uf61e]",
           "trackingAdjust": 0,
           "size": 16
         },
@@ -60,7 +62,7 @@
           "type": "font",
           "name": "MATERIAL_SYMBOLS_REGULAR_16",
           "file": "fonts/MaterialSymbolsRounded_28pt-Medium.ttf",
-          "characterRegex": "[\ue000\ue09c\ue1a4\ue1a7\ue1a8\ue1a9\ue2bd\ue3a1\ue536\ue5c8\ue5d8\ue818\ue81a\ue87d\ue8e5\uead0\ueb3b\uebdb\uec1c\uf157\uf166\uf172\uf176\uf1e0\uf1e1\uf1e3\uf1e4\uf305\uf306\uf30a\uf30b\uf30c\uf3cc\uf501\uf61e]",
+          "characterRegex": "[\ue000\ue09c\ue1a4\ue1a7\ue1a8\ue1a9\ue2bd\ue3a1\ue536\ue5c8\ue5d8\ue5db\ue818\ue81a\ue87d\ue8e5\ueacf\uead0\ueb3b\uebdb\uec1c\uf157\uf166\uf172\uf176\uf1e0\uf1e1\uf1e3\uf1e4\uf305\uf306\uf308\uf30a\uf30b\uf30c\uf30d\uf3cc\uf501\uf61e]",
           "trackingAdjust": 0,
           "size": 16
         },

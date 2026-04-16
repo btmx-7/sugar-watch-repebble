@@ -16,6 +16,8 @@ typedef struct {
   int32_t   delta;                 // mg/dL delta
   int32_t   last_read_offset_sec;  // seconds before now (0 = no reading)
   int8_t    weather_temp;          // -128 = unavailable
+  int8_t    weather_tmin;          // daily min, -128 = unavailable
+  int8_t    weather_tmax;          // daily max, -128 = unavailable
   uint8_t   weather_icon;          // 0..7
   int       heart_rate;            // BPM (0 = none)
   uint32_t  step_count;

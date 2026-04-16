@@ -20,6 +20,8 @@ var KEY_URGENT_HIGH     = 8;
 var KEY_URGENT_LOW      = 9;
 var KEY_WEATHER_TEMP    = 10;
 var KEY_WEATHER_ICON    = 11;
+var KEY_WEATHER_TMIN    = 17;
+var KEY_WEATHER_TMAX    = 18;
 var KEY_LAYOUT          = 12;
 var KEY_SLOT_0          = 13;
 var KEY_SLOT_1          = 14;
@@ -132,6 +134,9 @@ function fetchWeather() {
         '?latitude='  + lat +
         '&longitude=' + lon +
         '&current=temperature_2m,weather_code' +
+        '&daily=temperature_2m_min,temperature_2m_max' +
+        '&timezone=auto' +
+        '&forecast_days=1' +
         '&temperature_unit=celsius';
 
       var xhr = new XMLHttpRequest();
@@ -144,8 +149,19 @@ function fetchWeather() {
             var msg  = {};
             msg[KEY_WEATHER_TEMP] = temp;
             msg[KEY_WEATHER_ICON] = icon;
+            // Daily min/max for the active arc range. Fall back to -128 sentinel
+            // if the response shape is unexpected.
+            var tmin = -128, tmax = -128;
+            if (data.daily && data.daily.temperature_2m_min && data.daily.temperature_2m_max) {
+              var rawMin = data.daily.temperature_2m_min[0];
+              var rawMax = data.daily.temperature_2m_max[0];
+              if (typeof rawMin === 'number') tmin = Math.max(-127, Math.min(127, Math.round(rawMin)));
+              if (typeof rawMax === 'number') tmax = Math.max(-127, Math.min(127, Math.round(rawMax)));
+            }
+            msg[KEY_WEATHER_TMIN] = tmin;
+            msg[KEY_WEATHER_TMAX] = tmax;
             Pebble.sendAppMessage(msg,
-              function()  { console.log('Steady: weather sent OK (' + temp + 'C icon=' + icon + ')'); },
+              function()  { console.log('Steady: weather sent OK (' + temp + 'C [' + tmin + ',' + tmax + '] icon=' + icon + ')'); },
               function(e) { console.error('Steady: weather send failed: ' + JSON.stringify(e)); }
             );
           } catch(e) {
@@ -165,6 +181,8 @@ function fetchWeather() {
       var msg = {};
       msg[KEY_WEATHER_TEMP] = -128;
       msg[KEY_WEATHER_ICON] = 7;
+      msg[KEY_WEATHER_TMIN] = -128;
+      msg[KEY_WEATHER_TMAX] = -128;
       Pebble.sendAppMessage(msg, function(){}, function(){});
     }
   );
