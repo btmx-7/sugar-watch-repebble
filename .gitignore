@@ -37,6 +37,7 @@ Module.symvers
 Mkfile.old
 dkms.conf
 *.dwo
+resources/screenshots/archive
 
 # Local tooling
 .mcp.json
