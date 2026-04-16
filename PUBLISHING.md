@@ -98,7 +98,7 @@ Visit the returned URL (or check https://apps.repebble.com) and confirm:
 - ✓ Short description visible
 - ✓ Long description complete
 - ✓ Platform list includes: Time 2, Round 2, Time, Steel, Round
-- ✓ Author: "Michaël Tardi"
+- ✓ Author: "Michaël Blancon Tardi"
 
 ---
 
@@ -108,10 +108,10 @@ Visit the returned URL (or check https://apps.repebble.com) and confirm:
 | Field | Value |
 |-------|-------|
 | App Name | Steady |
-| Version | 2.0.0 |
+| Version | 1.0.0 |
 | UUID | 552fd91e-ad93-4d0f-ae44-74bc9d3108d6 |
 | Category | Health / Utilities |
-| Author | Michaël Tardi |
+| Author | Michaël Blancon Tardi |
 
 ### Supported Platforms
 - Pebble Time 2 (emery) — 200×228 color e-paper
