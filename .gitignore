@@ -39,6 +39,7 @@ Mkfile.old
 dkms.conf
 *.dwo
 resources/screenshots/archive
+resources/appstore-description-draft.md
 
 # Local tooling
 .mcp.json

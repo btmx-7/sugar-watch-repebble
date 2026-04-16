@@ -23,8 +23,8 @@ SDK: ⚠ Requires installation
 
 ### Metadata
 - **Display Name**: Steady
-- **Short Description** (package.json): "A polished CGM watchface with two layouts, 4 configurable data slots, and sparkline graph. Glucose, heart rate, steps, weather, and battery at a glance."
-- **Long Description** (package.json): Full feature list with platform support
+- **Short Description** (package.json): "A clean watchface for Pebble Time 2 and Round 2. Large clock, 4 configurable slots, and a built-in CGM widget. Glucose monitoring that fits in."
+- **Long Description** (package.json): Clean watchface framing with CGM as a natural widget, not a medical device identity
 - **UUID**: 552fd91e-ad93-4d0f-ae44-74bc9d3108d6 (unchanged)
 - **Version**: 2.0.0
 - **Target Platforms**: Time 2 (emery), Round 2 (gabbro), Time (basalt), Steel (diorite), Round (chalk)
@@ -122,13 +122,22 @@ Visit the returned URL (or check https://apps.repebble.com) and confirm:
 - Pebble Round (chalk) — 180×180 circular
 
 ### Feature Summary
-- Simple layout: large 2-row clock in Inter Black with 4 corner widget slots
-- 4 configurable widget slots: Battery, Weather, Heart Rate, Steps, CGM
-- CGM integration (Nightscout and Dexcom Share)
-- 3-hour sparkline graph for glucose trend history
-- Color-coded glucose zones: urgent low/high (red), low (orange), in range (accent), high (yellow)
+- Clean watchface design. Large clock and 4 configurable widget slots.
+- Built-in CGM widget. Glucose stays visible alongside other data. It does not dominate the face.
+- Each slot is assignable to one of the following:
+  - Battery
+  - Weather
+  - Heart rate
+  - Steps
+  - Glucose
+- Color-coded glucose zones:
+  - Urgent low/high: red
+  - Low: orange
+  - In range: accent color
+  - High: yellow
 - Haptic and visual alerts on urgent zones
-- Weather via OpenMeteo (no API key required)
+- CGM sources: Nightscout and Dexcom Share
+- Weather via OpenMeteo. No API key required.
 - Quick View (compact mode) support on all platforms
 
 ---
