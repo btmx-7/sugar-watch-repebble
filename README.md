@@ -1,52 +1,71 @@
 # Steady
 
-A polished CGM watchface for Pebble Time 2 and Round 2. Two layouts, 4 configurable data slots, and a sparkline graph. Glucose, heart rate, steps, weather, and battery at a glance.
+**Your wrist, always in the know.**
+
+A polished CGM watchface for Pebble Time 2 and Round 2. Large clock, 4 configurable data slots, and a sparkline glucose graph — everything that matters, readable at a glance.
 
 Built for the rePebble Spring 2026 App Contest.
 
-## Layouts
+---
 
-**Simple** — time-first. Large 2-row clock in Inter Black 64px with 4 corner widget slots. For casual wearers who want the time front and center with context around it.
+## Features
 
-**Dashboard** — glucose-first. Single-row time at center with 3 top slots, a full CGM sparkline graph, and a trend/value panel. For active glucose monitoring.
+- **CGM Integration** — Nightscout and Dexcom Share supported out of the box
+- **3-hour sparkline graph** — glucose trend history at a glance
+- **4 configurable widget slots** — battery, weather, heart rate, steps, or CGM in any corner
+- **Color-coded glucose zones** — urgent low/high (red), low (orange), in range (green), high (yellow)
+- **Haptic + visual alerts** — screen flash and vibration pattern on urgent glucose zones
+- **No API key required** — weather via OpenMeteo
+
+## Layout
+
+**Simple** — time-first. Large 2-row clock in Inter Black with 4 corner widget slots. Clean and glanceable for everyday wear.
 
 ## Widget Slots
 
-4 fully configurable slots (Simple: 4 corners; Dashboard: 3 top). Each slot shows:
-- **Battery** — charge percent with arc progress ring
-- **Weather** — temperature + icon (via OpenMeteo, no API key)
-- **Heart Rate** — live BPM from Pebble Health
-- **Steps** — daily step count toward 10k goal
-- **CGM** — current glucose with zone color and trend arrow
+4 fully configurable corner slots. Each slot can show:
+
+| Slot | Data |
+|------|------|
+| Battery | Charge percent with arc progress ring |
+| Weather | Temperature + condition icon (OpenMeteo) |
+| Heart Rate | Live BPM from Pebble Health |
+| Steps | Daily step count toward 10k goal |
+| CGM | Current glucose with zone color and trend arrow |
 
 ## CGM Support
 
 Fetches glucose data from:
-- **Nightscout** (URL + optional token)
-- **Dexcom Share** (username + password, US + international servers)
+- **Nightscout** — URL + optional access token
+- **Dexcom Share** — username + password, US and international servers
 
-Color-coded zones: urgent low (red), low (orange), in range (green), high (yellow), urgent high (red). Stale data shown in gray. Urgent zones trigger screen flash + haptic pattern.
+Stale data shown in gray. Glucose display in mg/dL or mmol/L.
 
 ## Platforms
 
-- Pebble Time 2 (emery) — 200×228, rectangular
-- Round 2 (gabbro) — 260×260, circular
-- Pebble Time (basalt), Steel (diorite), Round (chalk)
+| Device | Resolution | Shape |
+|--------|-----------|-------|
+| Pebble Time 2 (emery) | 200×228 | Rectangular |
+| Pebble Round 2 (gabbro) | 260×260 | Circular |
+| Pebble Time (basalt) | 144×168 | Rectangular |
+| Pebble Steel (diorite) | 144×168 | Rectangular |
+| Pebble Round (chalk) | 180×180 | Circular |
 
 ## Settings
 
-Configured via the Pebble app:
-- Layout (Simple / Dashboard)
+Configured via the Pebble app settings page:
+
 - 4 widget slot assignments
 - CGM data source + credentials
-- Glucose units (mg/dL / mmol/L)
+- Glucose display units (mg/dL / mmol/L)
 - Graph window (1, 2, or 3 hours)
 - Alert thresholds (low, high, urgent low, urgent high)
 
-## Coming Soon
+## Roadmap
 
+- **Dashboard layout** — glucose-first layout with single-row time, 3 top slots, full sparkline graph, and a CGM trend/value panel. For active glucose monitoring.
 - 8 color themes (Cyan is default)
-- Light mode + auto-sunset
+- Light mode + auto-sunset switch
 - Music playback indicator
 
 ## License
