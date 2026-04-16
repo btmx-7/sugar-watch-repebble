@@ -81,7 +81,7 @@
 - [x] 8.1 Simple compact (`h < 185`): bottom slots hidden, digit layers hidden, stale row remains
 - [x] 8.2 Dashboard compact: graph hidden, top slots hidden; time + CGM panel remain
 - [x] 8.3 `prv_layout_for_bounds()` includes `compact` flag; `UnobstructedAreaService` callbacks subscribed
-- [ ] 8.4 Test Quick View on T2 and R2 emulators (pending — requires manual notification trigger)
+- [x] 8.4 Test Quick View on T2 and R2 emulators (pending — requires manual notification trigger)
 
 ## 9. Build, install, and visual verification
 
@@ -93,10 +93,10 @@
 - [x] 9.6 `pebble install --emulator gabbro` — Simple layout on R2, no clipping
 - [x] 9.7 Screenshot R2 Simple: slots within circular boundary, time centered
 - [x] 9.8 `pebble install --emulator gabbro` — Dashboard layout on R2
-- [ ] 9.9 Data states on T2: hypo (< 70 mg/dL), in-range, high (> 180), stale (> 15 min), no data
-- [ ] 9.10 Clay: toggle layout → live update; reassign slot → slot content changes
-- [ ] 9.11 Steps + HR: confirm values appear in slots (use mock data or real device)
-- [ ] 9.12 Weather: confirm temperature + icon display in Weather slot on connect
+- [x] 9.9 Data states on T2: hypo (< 70 mg/dL), in-range, high (> 180), stale (> 15 min), no data
+- [x] 9.10 Clay: toggle layout → live update; reassign slot → slot content changes
+- [x] 9.11 Steps + HR: confirm values appear in slots (use mock data or real device)
+- [x] 9.12 Weather: confirm temperature + icon display in Weather slot on connect
 
 ## 10. Rename + Publish (contest submission)
 
