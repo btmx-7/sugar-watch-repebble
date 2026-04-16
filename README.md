@@ -2,7 +2,7 @@
 
 Your wrist, always in the know.
 
-A clean watchface for Pebble Time 2 and Round 2. Large clock, 4 configurable slots, and a sparkline graph. It includes a CGM widget for glucose monitoring. People living with diabetes get the data they need, without a display that looks like a medical device.
+A clean watchface for Pebble Time 2 and Round 2. Large clock and 4 configurable slots. The CGM widget shows your glucose level naturally, not as the entire identity. People living with diabetes get the data they need in a blended design that looks like any other watchface.
 
 Built for the Pebble Spring 2026 App Contest.
 
