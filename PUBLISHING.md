@@ -18,15 +18,14 @@ SDK: ⚠ Requires installation
 
 ### Screenshots (in `resources/screenshots/`)
 1. `screenshot_T2_simple_dark.png` — Time 2 Simple layout (200×228)
-2. `screenshot_T2_dashboard_dark.png` — Time 2 Dashboard layout (200×228)
-3. `screenshot_R2_simple_dark.png` — Round 2 Simple layout (260×260)
+2. `screenshot_R2_simple_dark.png` — Round 2 Simple layout (260×260)
 
 ### Metadata
 - **Display Name**: Steady
 - **Short Description** (package.json): "A clean watchface for Pebble Time 2 and Round 2. Large clock, 4 configurable slots, and a built-in CGM widget. Glucose monitoring that fits in."
 - **Long Description** (package.json): Clean watchface framing with CGM as a natural widget, not a medical device identity
 - **UUID**: 552fd91e-ad93-4d0f-ae44-74bc9d3108d6 (unchanged)
-- **Version**: 2.0.0
+- **Version**: 1.0.0
 - **Target Platforms**: Time 2 (emery), Round 2 (gabbro), Time (basalt), Steel (diorite), Round (chalk)
 
 ---
