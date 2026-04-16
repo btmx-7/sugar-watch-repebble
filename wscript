@@ -14,18 +14,25 @@ def build(ctx):
     ctx.load('pebble_sdk')
 
     use_demo = os.environ.get('DEMO_DATA')
+    demo_state = os.environ.get('DEMO_STATE', '2')
 
     build_worker = os.path.exists('worker_src')
     binaries = []
     cached_env = ctx.env
     for platform in ctx.env.TARGET_PLATFORMS:
         ctx.env = ctx.all_envs[platform]
-        # DEMO_DATA=1 pebble build — injects fake data for visual testing
+        # DEMO_DATA=1 [DEMO_STATE=N] pebble build — injects fake data for QA
+        # Demo sources live in src/c/demo/ and are excluded from release builds.
         if use_demo:
-            ctx.env.append_value('CFLAGS', ['-DDEMO_DATA'])
+            ctx.env.append_value('CFLAGS',
+                ['-DDEMO_DATA', '-DDEMO_STATE=' + demo_state])
+            c_sources = ctx.path.ant_glob('src/c/**/*.c')
+        else:
+            c_sources = ctx.path.ant_glob('src/c/**/*.c',
+                                          excl=['src/c/demo/**'])
         ctx.set_group(ctx.env.PLATFORM_NAME)
         app_elf = '{}/pebble-app.elf'.format(ctx.env.BUILD_DIR)
-        ctx.pbl_build(source=ctx.path.ant_glob('src/c/**/*.c'),
+        ctx.pbl_build(source=c_sources,
                       target=app_elf, bin_type='app')
         if build_worker:
             worker_elf = '{}/pebble-worker.elf'.format(ctx.env.BUILD_DIR)

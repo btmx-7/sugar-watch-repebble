@@ -540,22 +540,31 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   int w = bounds.size.w;
   int h = bounds.size.h;
-  // Arc drawn in a 48×44 rect, bottom-aligned with 4px side margin and 10px top offset
-  // Matches Figma: h-[44px] w-[48px] bottom-aligned in p-[2px] 56×56 container
-  GRect arc_bounds = GRect(4, 10, w - 8, h - 14);
+  (void)h;
+  // Arc: 50px circle, horizontally centered, bottom-aligned with 2px margin in 56×56 box
+  GRect arc_bounds = GRect(3, 4, 50, 50);
 
   // Battery ring: gap at top (30°→330°). All others: gap at bottom (210°→510°).
   bool is_battery = (d->type == SLOT_BATTERY);
   int arc_start = is_battery ? 30  : 210;
   int arc_end   = is_battery ? 330 : 510;
 
-  // Background track arc — surface/border/subtle (#005555), 2px stroke
+  // Background track arc — surface/border/subtle (#005555), 5px stroke
   graphics_context_set_stroke_color(ctx, CLR_BORDER_SUBTLE);
-  graphics_context_set_stroke_width(ctx, 2);
+  graphics_context_set_stroke_width(ctx, 5);
   graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
     DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(arc_end));
 
-  // Active fill arc — icon_color, 2px stroke
+  // Emulate rounded end caps on the empty arc with 5px filled circles at both endpoints
+  GPoint track_start_pt = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
+                                            DEG_TO_TRIGANGLE(arc_start));
+  GPoint track_end_pt   = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
+                                            DEG_TO_TRIGANGLE(arc_end));
+  graphics_context_set_fill_color(ctx, CLR_BORDER_SUBTLE);
+  graphics_fill_circle(ctx, track_start_pt, 2);
+  graphics_fill_circle(ctx, track_end_pt,   2);
+
+  // Active fill arc — icon_color, 2px stroke, with end-dot marker at current fill angle
   if (d->value_normalized > 0) {
     int fill_angle = arc_start + (d->value_normalized * 300 / 100);
     if (fill_angle > arc_end) fill_angle = arc_end;
@@ -563,6 +572,12 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
     graphics_context_set_stroke_width(ctx, 2);
     graphics_draw_arc(ctx, arc_bounds, GOvalScaleModeFitCircle,
       DEG_TO_TRIGANGLE(arc_start), DEG_TO_TRIGANGLE(fill_angle));
+
+    // End-dot: 2px filled circle at the fill endpoint, in the active color
+    GPoint fill_end_pt = gpoint_from_polar(arc_bounds, GOvalScaleModeFitCircle,
+                                           DEG_TO_TRIGANGLE(fill_angle));
+    graphics_context_set_fill_color(ctx, d->icon_color);
+    graphics_fill_circle(ctx, fill_end_pt, 1);
   }
 
   // Icon — 16px Material Symbol, top-center (absolute at y=2, 20px tall to prevent clipping)
@@ -578,24 +593,51 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
     }
   }
 
-  // Value — Inter Black 20px, white, centered below icon
+  // 8-offset stroke tables for black outline around value/label texts
+  static const GPoint offs2[8] = {
+    {-2, 0}, {2, 0}, {0, -2}, {0, 2},
+    {-2,-2}, {2,-2}, {-2, 2}, {2, 2}
+  };
+  static const GPoint offs1[8] = {
+    {-1, 0}, {1, 0}, {0, -1}, {0, 1},
+    {-1,-1}, {1,-1}, {-1, 1}, {1, 1}
+  };
+
+  // Value — Inter Black 20px in 46×20 box, horizontally centered (x=5),
+  // vertically centered in 34px area below icon (y=24). 2px black outline.
   if (d->value_str[0]) {
     GFont vfont = s_value_font ? s_value_font
                                : fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD);
+    GRect val_rect = GRect(5, 24, 46, 20);
+    graphics_context_set_text_color(ctx, GColorBlack);
+    for (int i = 0; i < 8; i++) {
+      GRect r = GRect(val_rect.origin.x + offs2[i].x,
+                      val_rect.origin.y + offs2[i].y,
+                      val_rect.size.w, val_rect.size.h);
+      graphics_draw_text(ctx, d->value_str, vfont, r,
+        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    }
     graphics_context_set_text_color(ctx, CLR_TEXT_INVERTED);
-    GRect val_rect = GRect(0, 20, w, 22);
-    graphics_draw_text(ctx, d->value_str, vfont,
-      val_rect, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, d->value_str, vfont, val_rect,
+      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
 
-  // Unit — Inter Black 10px, text/subtle (#AAFFFF)
+  // Unit — Inter Black 10px in 24×10 box at x=16, y=44. 1px black outline.
   if (d->unit_str[0]) {
     GFont ufont = s_unit_font ? s_unit_font
                               : fonts_get_system_font(FONT_KEY_GOTHIC_14);
+    GRect unit_rect = GRect(16, 44, 24, 10);
+    graphics_context_set_text_color(ctx, GColorBlack);
+    for (int i = 0; i < 8; i++) {
+      GRect r = GRect(unit_rect.origin.x + offs1[i].x,
+                      unit_rect.origin.y + offs1[i].y,
+                      unit_rect.size.w, unit_rect.size.h);
+      graphics_draw_text(ctx, d->unit_str, ufont, r,
+        GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    }
     graphics_context_set_text_color(ctx, CLR_TEXT_SUBTLE);
-    GRect unit_rect = GRect(0, 42, w, 12);
-    graphics_draw_text(ctx, d->unit_str, ufont,
-      unit_rect, GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
+    graphics_draw_text(ctx, d->unit_str, ufont, unit_rect,
+      GTextOverflowModeWordWrap, GTextAlignmentCenter, NULL);
   }
 }
 
@@ -905,8 +947,17 @@ static void select_click_handler(ClickRecognizerRef recognizer, void *context) {
   if (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH) dismiss_alert();
 }
 
+#ifdef DEMO_DATA
+static void demo_up_click(ClickRecognizerRef recognizer, void *context);
+static void demo_down_click(ClickRecognizerRef recognizer, void *context);
+#endif
+
 static void click_config_provider(void *context) {
   window_single_click_subscribe(BUTTON_ID_SELECT, select_click_handler);
+#ifdef DEMO_DATA
+  window_single_click_subscribe(BUTTON_ID_UP,   demo_up_click);
+  window_single_click_subscribe(BUTTON_ID_DOWN, demo_down_click);
+#endif
 }
 
 // ─── Pebble Health Callback ──────────────────────────────────────────────────
@@ -1030,23 +1081,28 @@ void prv_layout_for_bounds(GRect bounds) {
       if (s_simple_bt_layer)
         layer_set_frame(text_layer_get_layer(s_simple_bt_layer), GRect(92, 4, 16, 16));
 
-      // Day/Month: vertical center flanking time
-      if (s_simple_day_layer)
+      // Day/Month: vertical center flanking time (T2 hugs screen edges)
+      if (s_simple_day_layer) {
         layer_set_frame(text_layer_get_layer(s_simple_day_layer), GRect(4, 106, 18, 16));
-      if (s_simple_month_layer)
+        text_layer_set_text_alignment(s_simple_day_layer, GTextAlignmentRight);
+      }
+      if (s_simple_month_layer) {
         layer_set_frame(text_layer_get_layer(s_simple_month_layer), GRect(178, 106, 18, 16));
+        text_layer_set_text_alignment(s_simple_month_layer, GTextAlignmentLeft);
+      }
 
       // Music: bottom center
       if (s_simple_music_layer)
         layer_set_frame(text_layer_get_layer(s_simple_music_layer), GRect(92, 208, 16, 16));
 
     } else {
-      // R2: 260x260 inscribed circle
+      // R2: 260x260 inscribed circle — cross arrangement (per Figma 329:20387)
+      // Frame index matches s_settings.slots order: [Weather, Battery, CGM, HR]
       GRect slot_frames[4] = {
-        GRect(38,  38,  56, 56),  // TL
-        GRect(166, 38,  56, 56),  // TR
-        GRect(38,  166, 56, 56),  // BL
-        GRect(166, 166, 56, 56)   // BR
+        GRect(4,   102, 56, 56),  // slot[0] → Weather (center-left)
+        GRect(102, 4,   56, 56),  // slot[1] → Battery (top-center)
+        GRect(102, 200, 56, 56),  // slot[2] → CGM (bottom-center)
+        GRect(200, 102, 56, 56)   // slot[3] → Heart Rate (center-right)
       };
       for (int i = 0; i < 4; i++) {
         if (s_slot_layer[i]) {
@@ -1079,12 +1135,17 @@ void prv_layout_for_bounds(GRect bounds) {
           layer_set_frame(s_simple_digit_stroke[3], GRect(125, 112, 56, 78));  // M2
       }
 
+      // BT bottom-left, Day top-left, Month top-right (per Figma 329:20387)
       if (s_simple_bt_layer)
-        layer_set_frame(text_layer_get_layer(s_simple_bt_layer), GRect(122, 14, 16, 16));
-      if (s_simple_day_layer)
-        layer_set_frame(text_layer_get_layer(s_simple_day_layer), GRect(8, 128, 24, 16));
-      if (s_simple_month_layer)
-        layer_set_frame(text_layer_get_layer(s_simple_month_layer), GRect(228, 128, 24, 16));
+        layer_set_frame(text_layer_get_layer(s_simple_bt_layer), GRect(52, 192, 16, 16));
+      if (s_simple_day_layer) {
+        layer_set_frame(text_layer_get_layer(s_simple_day_layer), GRect(48, 52, 24, 16));
+        text_layer_set_text_alignment(s_simple_day_layer, GTextAlignmentCenter);
+      }
+      if (s_simple_month_layer) {
+        layer_set_frame(text_layer_get_layer(s_simple_month_layer), GRect(188, 52, 24, 16));
+        text_layer_set_text_alignment(s_simple_month_layer, GTextAlignmentCenter);
+      }
     }
 
     // Stale row (Simple)
@@ -1407,6 +1468,68 @@ static void main_window_unload(Window *window) {
   unobstructed_area_service_unsubscribe();
 }
 
+// ─── Demo Data (QA only) ─────────────────────────────────────────────────────
+#ifdef DEMO_DATA
+#include "demo/demo.h"
+
+static int s_demo_state = DEMO_STATE;
+
+static void apply_demo_state(int n) {
+  if (n < 0) n = DEMO_SCENARIO_COUNT - 1;
+  if (n >= DEMO_SCENARIO_COUNT) n = 0;
+  s_demo_state = n;
+
+  const DemoScenario *d = &demo_scenarios[n];
+  s_glucose       = d->glucose;
+  s_trend         = d->trend;
+  s_delta         = d->delta;
+  s_last_read_sec = (d->last_read_offset_sec > 0)
+                      ? time(NULL) - d->last_read_offset_sec
+                      : 0;
+  s_weather_temp  = d->weather_temp;
+  s_weather_icon  = d->weather_icon;
+  s_heart_rate    = d->heart_rate;
+  s_step_count    = d->step_count;
+
+  s_settings.layout   = (WatchLayout)d->layout;
+  s_settings.slots[0] = (SlotType)d->slots[0];
+  s_settings.slots[1] = (SlotType)d->slots[1];
+  s_settings.slots[2] = (SlotType)d->slots[2];
+  s_settings.slots[3] = (SlotType)d->slots[3];
+  s_settings.use_mmol    = false;
+  s_settings.high_thresh = 180;
+  s_settings.low_thresh  = 70;
+  s_settings.urgent_high = 250;
+  s_settings.urgent_low  = 55;
+
+  // Graph pattern fill (values stored as mg/dL / 2)
+  s_graph_count = GRAPH_POINTS;
+  for (int i = 0; i < GRAPH_POINTS; i++) {
+    uint8_t v;
+    switch (d->graph_pattern) {
+      case 1:  v = 30 + i * 2; break;                            // rising
+      case 2:  v = 100 - i * 2; break;                           // falling
+      case 3:  v = 25; break;                                    // flat low
+      case 4:  v = (i == GRAPH_POINTS / 2) ? 140 : 60; break;    // spike
+      default: v = 60 + (i % 7) * 5; break;                      // wave
+    }
+    s_graph_data[i] = v;
+  }
+
+  APP_LOG(APP_LOG_LEVEL_INFO, "[demo] state %d: %s", n, d->name);
+}
+
+static void demo_up_click(ClickRecognizerRef r, void *c) {
+  apply_demo_state(s_demo_state + 1);
+  update_display();
+}
+
+static void demo_down_click(ClickRecognizerRef r, void *c) {
+  apply_demo_state(s_demo_state - 1);
+  update_display();
+}
+#endif /* DEMO_DATA */
+
 // ─── Init / Deinit ───────────────────────────────────────────────────────────
 
 static void init(void) {
@@ -1429,32 +1552,7 @@ static void init(void) {
   if (persist_exists(PERSIST_WEATHER_ICN)) s_weather_icon          = (uint8_t)persist_read_int(PERSIST_WEATHER_ICN);
 
 #ifdef DEMO_DATA
-  // Override with demo values for visual testing of all widget modules
-  s_glucose       = 120;
-  s_trend         = TREND_FLAT;
-  s_delta         = 2;
-  s_last_read_sec = time(NULL) - 180;  // 3 min ago (not stale)
-  s_weather_temp  = 10;
-  s_weather_icon  = 0;  // sunny
-  s_heart_rate    = 128;
-  s_step_count    = 6842;
-
-  s_settings.use_mmol    = false;
-  s_settings.high_thresh = 180;
-  s_settings.low_thresh  = 70;
-  s_settings.urgent_high = 250;
-  s_settings.urgent_low  = 55;
-  s_settings.layout      = LAYOUT_SIMPLE;
-  s_settings.slots[0]    = SLOT_WEATHER;     // TL
-  s_settings.slots[1]    = SLOT_BATTERY;     // TR
-  s_settings.slots[2]    = SLOT_CGM;         // BL
-  s_settings.slots[3]    = SLOT_HEART_RATE;  // BR
-
-  // Demo graph data (gentle wave around 120-160 mg/dL, stored as value/2)
-  s_graph_count = GRAPH_POINTS;
-  for (int i = 0; i < GRAPH_POINTS; i++) {
-    s_graph_data[i] = (uint8_t)(60 + (i % 7) * 5);  // 120-150 mg/dL range
-  }
+  apply_demo_state(DEMO_STATE);
 #endif
 
   s_main_window = window_create();
