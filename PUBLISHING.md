@@ -184,7 +184,6 @@ pebble build
 ### Screenshots not uploading
 Check that these files exist and are valid PNG:
 - `resources/screenshots/screenshot_T2_simple_dark.png`
-- `resources/screenshots/screenshot_T2_dashboard_dark.png`
 - `resources/screenshots/screenshot_R2_simple_dark.png`
 
 ---
