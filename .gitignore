@@ -2,6 +2,7 @@
 build/
 *.pbw
 *.pbz
+.lock-waf_*
 
 # C build artifacts
 *.d
