@@ -4,7 +4,7 @@ Your wrist, always in the know.
 
 A polished CGM watchface for Pebble Time 2 and Round 2. Large clock, 4 configurable data slots, and a sparkline glucose graph. Everything that matters, readable at a glance.
 
-Built for the rePebble Spring 2026 App Contest.
+Built for the Pebble Spring 2026 App Contest.
 
 ---
 
