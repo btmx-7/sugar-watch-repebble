@@ -38,9 +38,7 @@
       "KEY_SLOT_2":         15,
       "KEY_SLOT_3":         16,
       "KEY_WEATHER_TMIN":   17,
-      "KEY_WEATHER_TMAX":   18,
-      "KEY_MOCK_HR":        19,
-      "KEY_MOCK_STEPS":     20
+      "KEY_WEATHER_TMAX":   18
     },
     "resources": {
       "media": [
