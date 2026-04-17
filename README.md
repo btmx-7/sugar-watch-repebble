@@ -11,7 +11,6 @@ Built for the Pebble Spring 2026 App Contest.
 ## Features
 
 - CGM integration (Nightscout and Dexcom Share supported out of the box)
-- 3-hour sparkline graph for glucose trend history
 - 4 configurable widget slots (battery, weather, heart rate, steps, or CGM in any corner)
 - Color-coded glucose zones: urgent low/high (red), low (orange), in range (theme accent color), high (yellow)
 - Haptic and visual alerts on urgent glucose zones
@@ -63,7 +62,12 @@ Configured via the Pebble app settings page:
 
 ## Roadmap
 
-- Dashboard layout: a glucose-first layout with single-row time, 3 top slots, full sparkline graph, and a CGM trend/value panel. Designed for active glucose monitoring.
+### Next release
+
+- Dashboard layout: a glucose-first layout with single-row time, 3 top slots, 3-hour sparkline graph, and a CGM trend/value panel. Designed for active glucose monitoring.
+
+### Future
+
 - 8 color themes (Cyan is default)
 - Light mode
 - Auto-sunset mode switch
