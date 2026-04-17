@@ -39,13 +39,11 @@ Mkfile.old
 dkms.conf
 *.dwo
 
-
 # Local tooling
 .mcp.json
 .claude/
 .vscode/
 .envrc
-skills/
 
 # OS
 .DS_Store
