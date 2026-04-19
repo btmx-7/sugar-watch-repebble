@@ -103,5 +103,5 @@
 - [x] 10.0 Renamed "Sugar Watch" → "Steady": `package.json` (name + displayName), `config.html` (title + header), `index.js` (log strings + localStorage prefix "steady_")
 - [x] 10.1 Updated README, openspec/config.yaml; remaining references are internal docs only
 - [x] 10.2 Prepare contest screenshots: T2 Simple dark + T2 Dashboard dark + R2 Simple dark (screenshot_T2_simple_dark.png, screenshot_T2_dashboard_dark.png, screenshot_R2_simple_dark.png)
-- [ ] 10.3 `pebble publish` — push PBW to Pebble App Store
-- [ ] 10.4 Verify on apps.repebble.com: screenshots correct, description complete, both new platforms listed
+- [x] 10.3 `pebble publish` — push PBW to Pebble App Store
+- [x] 10.4 Verify on apps.repebble.com: screenshots correct, description complete, both new platforms listed
