@@ -5,84 +5,109 @@ Canvas: 200 × 228 px, rectangular, color e-paper.
 
 ### Round 2 (gabbro)
 Canvas: 260 × 260 px, circular clip (inscribed circle diameter 260 px), color e-paper.
-Note: corners are clipped. Keep critical content within the central 220 px diameter.
-The right edge of the CGM sidebar (x ≈ 230) clips below y ≈ 215 — new layers on R2
-must use reduced width or be omitted (see R2 notes in Layer Inventory).
+Circular boundary constraint: at y=246 the visible horizontal band narrows to
+x ≈ 77..183 (106 px). All CGM content on R2 must fit within this envelope.
 
 ---
 
 ## Zone Breakdown
 
-### Time 2 (200 × 228)
+### Time 2 (200 × 228) — unchanged from full-redesign
 
 | Zone | y | h | Purpose |
 |---|---|---|---|
-| slots | 0 | 64 | 3 widget circles (56×56, 4 px top margin) |
+| slots | 0 | 64 | 3 top widget slots (56×56, 4 px margin) |
 | time | 64 | 66 | HH:MM, BT icon, day/month |
-| cgm-panel | 130 | 98 | Left 120 px: sparkline graph · Right 68 px: CGM sidebar |
+| cgm-panel | 130 | 98 | Left 120 px: annotated sparkline graph · Right 68 px: CGM sidebar |
 | **Total** | | **228** | |
 
-### Round 2 (260 × 260)
+### Round 2 (260 × 260) — cgm-panel split into graph + below-graph
 
 | Zone | y | h | Purpose |
 |---|---|---|---|
-| slots | 0 | 80 | 3 widget circles (56×56, inscribed) |
+| slots | 0 | 80 | 3 top widget slots (56×56, inscribed) |
 | time | 80 | 68 | HH:MM, BT icon, day/month |
-| cgm-panel | 148 | 112 | Left 150 px: sparkline graph · Right 42 px: CGM sidebar |
-| **Total** | | **260** | |
+| graph | 148 | 60 | Annotated sparkline (height reduced from 76 to 60 to fit below-graph panel) |
+| below-graph | 210 | 38 | 2-row CGM panel: [trend name + unit] / [trend icon + glucose value] |
+| **Total** | | **260** (8 px margin at bottom) | |
 
 ---
 
 ## Layer Inventory
 
-Only Dashboard-specific layers are listed. `s_slot_layer[3]` is always hidden in
-Dashboard. `s_slot_layer[0..2]` are hidden in compact mode on both platforms.
+**Legend:** `[existing]` = correct as shipped · `[corrected]` = frame changes on R2 ·
+`[NEW]` = added by this change · `[T2 only]` / `[R2 only]` = platform-conditional
 
-**Legend:** `[existing]` = as-shipped; `[NEW]` = added by this change.
+### Shared layers (both platforms)
 
-### Time 2 (200 × 228)
+| Layer | Type | Font | Default color |
+|---|---|---|---|
+| s_slot_layer[0..2] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | CLR_ICON_DEFAULT arc |
+| s_slot_layer[3] `[existing]` | Layer | — | hidden always |
+| s_dash_time_layer `[existing]` | TextLayer | LECO_36_BOLD_NUMBERS | GColorWhite |
+| s_dash_bt_layer `[existing]` | TextLayer | MATERIAL_SYMBOLS_16 | CLR_ICON_DEFAULT |
+| s_dash_day_layer `[existing]` | TextLayer | GOTHIC_14 | CLR_TEXT_SUBTLE |
+| s_dash_month_layer `[existing]` | TextLayer | GOTHIC_14 | CLR_TEXT_SUBTLE |
+| s_graph_layer `[corrected R2]` | Layer | — | zone-colored line |
+| s_dash_trend_layer `[corrected R2]` | TextLayer | MATERIAL_SYMBOLS_16 | zone-colored |
+| s_dash_glucose_layer `[corrected R2]` | TextLayer | GOTHIC_24_BOLD | zone-colored |
+| s_dash_unit_layer `[corrected R2]` | TextLayer | GOTHIC_14 | GColorMediumAquamarine |
+| s_dash_trend_name_layer `[NEW]` | TextLayer | GOTHIC_14 | CLR_STATE_INACTIVE |
 
-| Layer | Type | Font | Frame (x,y,w,h) | Align | Default color |
-|---|---|---|---|---|---|
-| s_slot_layer[0] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | GRect(4,4,56,56) | — | CLR_ICON_DEFAULT arc |
-| s_slot_layer[1] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | GRect(72,4,56,56) | — | CLR_ICON_DEFAULT arc |
-| s_slot_layer[2] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | GRect(140,4,56,56) | — | CLR_ICON_DEFAULT arc |
-| s_dash_time_layer `[existing]` | TextLayer | LECO_36_BOLD_NUMBERS | GRect(24,76,144,44) | Center | GColorWhite |
-| s_dash_bt_layer `[existing]` | TextLayer | MATERIAL_SYMBOLS_16 | GRect(4,80,16,16) | Center | CLR_ICON_DEFAULT |
-| s_dash_day_layer `[existing]` | TextLayer | GOTHIC_14 | GRect(176,74,20,14) | Right | CLR_TEXT_SUBTLE |
-| s_dash_month_layer `[existing]` | TextLayer | GOTHIC_14 | GRect(176,94,20,14) | Right | CLR_TEXT_SUBTLE |
-| s_graph_layer `[existing]` | Layer | — | GRect(4,130,120,80) | — | zone-colored line |
-| s_dash_trend_layer `[existing]` | TextLayer | MATERIAL_SYMBOLS_16 | GRect(128,130,68,20) | Right | zone-colored |
-| s_dash_glucose_layer `[existing]` | TextLayer | GOTHIC_24_BOLD | GRect(128,152,68,30) | Right | zone-colored |
-| s_dash_unit_layer `[existing]` | TextLayer | GOTHIC_14 | GRect(128,182,68,14) | Right | GColorMediumAquamarine |
-| s_dash_delta_layer `[NEW]` | TextLayer | GOTHIC_14 | GRect(128,196,68,14) | Right | zone-colored |
-| s_dash_fresh_layer `[NEW]` | TextLayer | GOTHIC_14 | GRect(128,210,68,14) | Right | CLR_STATE_INACTIVE |
-| s_dash_zone_layer `[NEW]` | TextLayer | GOTHIC_14 | GRect(128,210,68,14) | Right | zone-colored |
+### Time 2 — exact frames (all existing, no changes)
 
-`s_dash_fresh_layer` and `s_dash_zone_layer` share position y=210 and are
-mutually exclusive: fresh shown when in-range, zone label shown when out of range.
-Bottom of lowest element: y=224 (4 px margin to screen edge at 228).
+| Layer | Frame (x,y,w,h) | Align |
+|---|---|---|
+| s_slot_layer[0] | GRect(4,4,56,56) | — |
+| s_slot_layer[1] | GRect(72,4,56,56) | — |
+| s_slot_layer[2] | GRect(140,4,56,56) | — |
+| s_dash_time_layer | GRect(24,76,144,44) | Center |
+| s_dash_bt_layer | GRect(4,80,16,16) | Center |
+| s_dash_day_layer | GRect(176,74,20,14) | Right |
+| s_dash_month_layer | GRect(176,94,20,14) | Right |
+| s_graph_layer | GRect(4,130,120,80) | — |
+| s_dash_trend_layer | GRect(128,130,68,20) | Right |
+| s_dash_glucose_layer | GRect(128,152,68,30) | Right |
+| s_dash_unit_layer | GRect(128,182,68,14) | Right |
+| s_dash_trend_name_layer | hidden | — |
 
-### Round 2 (260 × 260)
+### Round 2 — exact frames (`[corrected]` = changed from current code)
 
-| Layer | Type | Font | Frame (x,y,w,h) | Align | Default color |
-|---|---|---|---|---|---|
-| s_slot_layer[0] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | GRect(20,20,56,56) | — | CLR_ICON_DEFAULT arc |
-| s_slot_layer[1] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | GRect(102,14,56,56) | — | CLR_ICON_DEFAULT arc |
-| s_slot_layer[2] `[existing]` | Layer | MATERIAL_SYMBOLS_16 | GRect(184,20,56,56) | — | CLR_ICON_DEFAULT arc |
-| s_dash_time_layer `[existing]` | TextLayer | LECO_36_BOLD_NUMBERS | GRect(50,90,160,44) | Center | GColorWhite |
-| s_dash_bt_layer `[existing]` | TextLayer | MATERIAL_SYMBOLS_16 | GRect(10,94,16,16) | Center | CLR_ICON_DEFAULT |
-| s_dash_day_layer `[existing]` | TextLayer | GOTHIC_14 | GRect(234,88,20,14) | Right | CLR_TEXT_SUBTLE |
-| s_dash_month_layer `[existing]` | TextLayer | GOTHIC_14 | GRect(234,108,20,14) | Right | CLR_TEXT_SUBTLE |
-| s_graph_layer `[existing]` | Layer | — | GRect(30,148,150,76) | — | zone-colored line |
-| s_dash_trend_layer `[existing]` | TextLayer | MATERIAL_SYMBOLS_16 | GRect(188,148,42,20) | Right | zone-colored |
-| s_dash_glucose_layer `[existing]` | TextLayer | GOTHIC_24_BOLD | GRect(188,170,42,30) | Right | zone-colored |
-| s_dash_unit_layer `[existing]` | TextLayer | GOTHIC_14 | GRect(188,200,42,14) | Right | GColorMediumAquamarine |
-| s_dash_delta_layer `[NEW]` | TextLayer | GOTHIC_14 | GRect(188,214,36,14) | Right | zone-colored |
+| Layer | Frame (x,y,w,h) | Align | Note |
+|---|---|---|---|
+| s_slot_layer[0] | GRect(20,20,56,56) | — | existing |
+| s_slot_layer[1] | GRect(102,14,56,56) | — | existing |
+| s_slot_layer[2] | GRect(184,20,56,56) | — | existing |
+| s_dash_time_layer | GRect(50,90,160,44) | Center | existing |
+| s_dash_bt_layer | GRect(10,94,16,16) | Center | existing |
+| s_dash_day_layer | GRect(234,88,20,14) | Right | existing |
+| s_dash_month_layer | GRect(234,108,20,14) | Right | existing |
+| s_graph_layer | GRect(30,148,150,**60**) | — | `[corrected]` height 76→60 |
+| s_dash_trend_name_layer | GRect(42,212,96,14) | Left | `[NEW]` trend text row 1 |
+| s_dash_unit_layer | GRect(142,212,76,14) | Right | `[corrected]` row 1 right |
+| s_dash_trend_layer | GRect(82,226,24,20) | Center | `[corrected]` row 2 left |
+| s_dash_glucose_layer | GRect(110,226,70,20) | Left | `[corrected]` row 2 right |
 
-R2 note: delta uses w=36 (ends at x=224) to stay within the inscribed circle at
-y=214 (x_max ≈ 229). Freshness and zone label are not rendered in R2 Dashboard —
-the circular boundary provides insufficient space below y=228 at sidebar x.
+R2 boundary check at y=246 (bottom of row 2): x_min ≈ 77, x_max ≈ 183.
+Content spans x=82..180 — within boundary ✓
+
+---
+
+## Graph Threshold Labels (both platforms)
+
+Drawn inside `graph_layer_update_proc` using `graphics_draw_text()`.
+No new layers required — rendered directly on the graph canvas.
+
+| Text | Position within layer | Font | Color |
+|---|---|---|---|
+| "hyper" | GRect(1, hy−13, w/2, 13) above high line | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| high value ("230") | GRect(w/2, hy−13, w/2, 13) above high line | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| "hypo" | GRect(1, ly+1, w/2, 13) below low line | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| low value ("65") | GRect(w/2, ly+1, w/2, 13) below low line | FONT_KEY_GOTHIC_14 | GColorLightGray |
+
+`hy` = `VAL_TO_Y(s_settings.high_thresh)`, `ly` = `VAL_TO_Y(s_settings.low_thresh)`.
+Guard: only draw if the threshold is within `[min_val, max_val]` (condition already
+present for line drawing — add text draw immediately after each existing line draw).
 
 ---
 
@@ -90,89 +115,74 @@ the circular boundary provides insufficient space below y=228 at sidebar x.
 
 | Constant | Approx height | Used for |
 |---|---|---|
-| FONT_KEY_LECO_36_BOLD_NUMBERS | ~36 px | Dashboard time (HH:MM, colon included) |
-| RESOURCE_ID_MATERIAL_SYMBOLS_16 | 16 px | BT icon, trend arrow in sidebar |
-| FONT_KEY_GOTHIC_24_BOLD | ~24 px | Glucose value in sidebar |
-| FONT_KEY_GOTHIC_14 | ~14 px | Day, month, unit, delta, freshness, zone label |
+| FONT_KEY_LECO_36_BOLD_NUMBERS | ~36 px | Dashboard time (HH:MM) |
+| RESOURCE_ID_MATERIAL_SYMBOLS_16 | 16 px | BT icon, trend arrow |
+| FONT_KEY_GOTHIC_24_BOLD | ~24 px | Glucose value (T2 sidebar) |
+| FONT_KEY_GOTHIC_14 | ~14 px | Day, month, unit, trend name, graph labels |
 
 ---
 
 ## Color Palette
 
-| Token / GColor | Hex | Semantic meaning |
+| Token / GColor | Hex | Semantic |
 |---|---|---|
-| CLR_STATE_DANGER | #FF0000 | URGENT_LOW, URGENT_HIGH zone |
+| CLR_STATE_DANGER | #FF0000 | URGENT_LOW, URGENT_HIGH |
 | CLR_STATE_WARNING | #FFAA00 | LOW zone |
 | GColorChromeYellow | #FFFF00 | HIGH zone `[changed by this spec]` |
 | CLR_ICON_DEFAULT | #55FFFF | IN_RANGE zone, arc stroke, BT connected |
-| CLR_STATE_INACTIVE | #AAAAAA | Stale / no data, freshness indicator |
-| CLR_STATE_DISABLED | #555555 | BT disconnected |
+| GColorLightGray | #AAAAAA | Stale/no data, graph threshold labels |
+| CLR_STATE_INACTIVE | #AAAAAA | Trend name default (no data) |
 | GColorWhite | #FFFFFF | Time text |
 | CLR_TEXT_SUBTLE | #AAFFFF | Day, month |
 | GColorMediumAquamarine | #00AAAA | Unit label |
 
-The `zone_color()` function MUST return `GColorChromeYellow` for `ZONE_HIGH`
-(currently returns `CLR_STATE_WARNING`). This aligns the sidebar color with the
-graph's `high_thresh` dashed line, which already uses `GColorChromeYellow`.
+`zone_color()` must return `GColorChromeYellow` for `ZONE_HIGH`
+(currently returns `CLR_STATE_WARNING`).
 
 ---
 
 ## Quick View / Compact Mode
 
-Compact mode is triggered when unobstructed height < 185 px (Quick View bar active).
-
-Hidden in compact mode:
+Hidden in compact mode (both platforms):
 - `s_slot_layer[0..2]` — top 3 widget slots
 - `s_graph_layer` — sparkline graph
 
 Visible and unchanged in compact mode:
-- `s_dash_time_layer`, `s_dash_bt_layer`, `s_dash_day_layer`, `s_dash_month_layer`
-- `s_dash_trend_layer`, `s_dash_glucose_layer`, `s_dash_unit_layer`
-- `s_dash_delta_layer`, `s_dash_fresh_layer`, `s_dash_zone_layer` — stay visible
-
-No layer repositioning occurs in compact mode for Dashboard; the CGM sidebar
-occupies the bottom of the screen and remains unobstructed by the Quick View bar.
+- Time row: `s_dash_time_layer`, `s_dash_bt_layer`, `s_dash_day_layer`, `s_dash_month_layer`
+- T2 sidebar: `s_dash_trend_layer`, `s_dash_glucose_layer`, `s_dash_unit_layer`
+- R2 below-graph panel: all four repositioned layers + `s_dash_trend_name_layer`
 
 ---
 
 ## ASCII Diagram
 
 ```
-Time 2 (200 × 228)                    Compact / Quick View
-┌──────────────────────────────────┐   ┌──────────────────────────────────┐
-│  [slot0 56×56] [slot1] [slot2]   │   │  (slots hidden)                  │
-│  y=4           y=72    y=140     │   │                                  │
-├──────────────────────────────────┤   │                                  │
-│  [BT]  HH:MM (LECO_36)  [DD]    │   │  [BT]  HH:MM (LECO_36)  [DD]    │
-│         y=76                [MM] │   │         y=76                [MM] │
-├─────────────────┬────────────────┤   ├─────────────────┬────────────────┤
-│  graph          │  [trend icon]  │   │  (graph hidden) │  [trend icon]  │
-│  120×80         │  y=130         │   │                 │  y=130         │
-│  y=130..210     │  [glucose]     │   │                 │  [glucose]     │
-│                 │  y=152         │   │                 │  y=152         │
-│                 │  [unit]        │   │                 │  [unit]        │
-│                 │  y=182         │   │                 │  y=182         │
-│                 │  [delta]       │   │                 │  [delta]       │
-│                 │  y=196         │   │                 │  y=196         │
-│                 │  [fresh|zone]  │   │                 │  [fresh|zone]  │
-│                 │  y=210         │   │                 │  y=210         │
-└─────────────────┴────────────────┘   └─────────────────┴────────────────┘
+Time 2 (200 × 228)                          Compact / Quick View
+┌──────────────────────────────────────┐     ┌──────────────────────────────────────┐
+│  [slot0 56×56]  [slot1]  [slot2]     │     │  (slots hidden)                      │
+│  y=4            y=4      y=4         │     │                                      │
+├──────────────────────────────────────┤     │  [BT] HH:MM (LECO_36) [DD]           │
+│  [BT]  HH:MM (LECO_36)  [DD]        │     │        y=76               [MM]        │
+│         y=76              [MM]       │     ├──────────────────┬───────────────────┤
+├──────────────────┬───────────────────┤     │  (graph hidden)  │  [trend →]  y=130 │
+│  graph  120×80   │  [trend →]  y=130 │     │                  │  [glucose]  y=152 │
+│  y=130..210      │  [glucose]  y=152 │     │                  │  [unit]     y=182 │
+│  hyper---230---  │  [unit]     y=182 │     └──────────────────┴───────────────────┘
+│  hypo----65----  │                   │
+└──────────────────┴───────────────────┘
 
-Round 2 (260 × 260) — circular clip shown as rounded corners
-┌────────────────────────────────────────┐
-│    [slot0]   [slot1]   [slot2]         │
-│    y=20      y=14      y=20            │
-│                                        │
-│  [BT]    HH:MM (LECO_36)       [DD]   │
-│           y=90                  [MM]   │
-│                                        │
-│  graph 150×76        [trend]           │
-│  y=148..224          y=148             │
-│                      [glucose]         │
-│                      y=170             │
-│                      [unit]            │
-│                      y=200             │
-│                      [delta w=36]      │
-│                      y=214             │
-└────────────────────────────────────────┘
+Round 2 (260 × 260) — circular clip
+┌──────────────────────────────────────────┐
+│    [slot0 y=20]  [slot1 y=14]  [slot2]   │
+│                                          │
+│  [BT]    HH:MM (LECO_36)       [DD][MM] │
+│           y=90                           │
+│                                          │
+│     graph  150×60  y=148..208            │
+│     hyper-----------230-----------       │
+│     hypo-----------65-------------       │
+│                                          │
+│     [trend name]        [unit]   y=212   │
+│     [→ icon]    [glucose value]  y=226   │
+└──────────────────────────────────────────┘
 ```

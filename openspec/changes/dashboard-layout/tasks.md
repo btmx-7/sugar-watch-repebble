@@ -1,163 +1,182 @@
-<!-- All pixel values and font choices reference layout.md in this change. -->
-<!-- Scope: close three missing CGM sidebar elements + fix HIGH zone color. -->
+<!-- All pixel values reference layout.md in this change. -->
+<!-- Three gaps to close: HIGH zone color · graph threshold labels · R2 CGM layout -->
 
 ## 1. Fix zone_color() HIGH mapping
 
-- [ ] 1.1 In `zone_color()` (~line 275 in main.c), change `case ZONE_HIGH:` to
+- [ ] 1.1 In `zone_color()` (main.c ~line 275), change `case ZONE_HIGH:` to
   return `GColorChromeYellow` instead of `CLR_STATE_WARNING`
-- [ ] 1.2 Verify the graph's `high_thresh` dashed line already uses
-  `GColorChromeYellow` — confirm no double-change needed there
-- [ ] 1.3 Run mental diff: SLOT_CGM arc color, s_dash_trend_layer, s_dash_glucose_layer
-  — all call `zone_color()`; confirm HIGH will now be yellow in all three places
+- [ ] 1.2 Confirm `graph_layer_update_proc` already uses `GColorChromeYellow`
+  for `high_thresh` line — no change needed there (already consistent)
+- [ ] 1.3 Confirm SLOT_CGM arc and `s_dash_glucose_layer` / `s_dash_trend_layer`
+  call `zone_color()` — HIGH readings will now render yellow in all three places
 
-## 2. Add three new TextLayer declarations
+## 2. Add graph threshold labels
 
-In `main.c` static declarations section (~line 200 area), after existing
-`s_dash_unit_layer` declaration, add:
+In `graph_layer_update_proc` (main.c ~line 325), add `graphics_draw_text()`
+calls immediately after each existing threshold line draw block.
 
-- [ ] 2.1 `static TextLayer *s_dash_delta_layer;`
-- [ ] 2.2 `static TextLayer *s_dash_fresh_layer;`
-- [ ] 2.3 `static TextLayer *s_dash_zone_layer;`
-
-## 3. Create layers in main_window_load()
-
-After the existing `s_dash_unit_layer` creation block (~line 1376 in main.c):
-
-- [ ] 3.1 Create `s_dash_delta_layer`:
+- [ ] 2.1 Before the existing `if (s_settings.low_thresh …)` block, declare
+  the label font once:
   ```c
-  s_dash_delta_layer = text_layer_create(GRect(128, 196, 68, 14));
-  text_layer_set_background_color(s_dash_delta_layer, GColorClear);
-  text_layer_set_text_color(s_dash_delta_layer, CLR_STATE_INACTIVE);
-  text_layer_set_font(s_dash_delta_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(s_dash_delta_layer, GTextAlignmentRight);
-  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_delta_layer));
+  GFont lbl = fonts_get_system_font(FONT_KEY_GOTHIC_14);
   ```
 
-- [ ] 3.2 Create `s_dash_fresh_layer`:
+- [ ] 2.2 Inside the `if (s_settings.high_thresh …)` block, after drawing the
+  dashed line, add:
   ```c
-  s_dash_fresh_layer = text_layer_create(GRect(128, 210, 68, 14));
-  text_layer_set_background_color(s_dash_fresh_layer, GColorClear);
-  text_layer_set_text_color(s_dash_fresh_layer, CLR_STATE_INACTIVE);
-  text_layer_set_font(s_dash_fresh_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(s_dash_fresh_layer, GTextAlignmentRight);
-  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_fresh_layer));
+  char h_buf[8];
+  snprintf(h_buf, sizeof(h_buf), "%d", (int)s_settings.high_thresh);
+  graphics_context_set_text_color(ctx, GColorLightGray);
+  graphics_draw_text(ctx, "hyper", lbl,
+    GRect(1, hy - 13, w / 2, 13),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, h_buf, lbl,
+    GRect(w / 2, hy - 13, w / 2, 13),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   ```
 
-- [ ] 3.3 Create `s_dash_zone_layer`:
+- [ ] 2.3 Inside the `if (s_settings.low_thresh …)` block, after drawing the
+  dashed line, add:
   ```c
-  s_dash_zone_layer = text_layer_create(GRect(128, 210, 68, 14));
-  text_layer_set_background_color(s_dash_zone_layer, GColorClear);
-  text_layer_set_text_color(s_dash_zone_layer, CLR_STATE_INACTIVE);
-  text_layer_set_font(s_dash_zone_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
-  text_layer_set_text_alignment(s_dash_zone_layer, GTextAlignmentRight);
-  layer_set_hidden(text_layer_get_layer(s_dash_zone_layer), true);
-  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_zone_layer));
+  char l_buf[8];
+  snprintf(l_buf, sizeof(l_buf), "%d", (int)s_settings.low_thresh);
+  graphics_context_set_text_color(ctx, GColorLightGray);
+  graphics_draw_text(ctx, "hypo", lbl,
+    GRect(1, ly + 1, w / 2, 13),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+  graphics_draw_text(ctx, l_buf, lbl,
+    GRect(w / 2, ly + 1, w / 2, 13),
+    GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
   ```
 
-## 4. Update update_display_dashboard() with new render logic
+- [ ] 2.4 Guard check: `hy - 13 >= 0` before drawing hyper label (avoid
+  negative rect origin if high threshold is near the top of the graph bounds).
+  Wrap the hyper text block: `if (hy >= 13) { … }`
 
-In `update_display_dashboard()` (~line 756 in main.c), after the existing
-`s_dash_unit_layer` block:
+- [ ] 2.5 Guard check: `ly + 14 <= h` before drawing hypo label.
+  Wrap the hypo text block: `if (ly + 14 <= h) { … }`
 
-- [ ] 4.1 Add delta rendering (after unit block):
+## 3. Add s_dash_trend_name_layer declaration and creation
+
+- [ ] 3.1 In the static declarations section (~line 200), add after existing
+  Dashboard layer declarations:
   ```c
-  // Delta — buf worst case: sign + 3 digits + null = 5 bytes; use 8 for safety
-  static char s_dash_delta_buf[8];
-  if (stale || s_glucose == 0) {
-    snprintf(s_dash_delta_buf, sizeof(s_dash_delta_buf), "--");
-  } else if (s_settings.use_mmol) {
-    int32_t abs_delta = s_delta < 0 ? -s_delta : s_delta;
-    int whole = (int)(abs_delta * 555 / 10000);
-    int frac  = (int)((abs_delta * 555 % 10000) / 1000);
-    snprintf(s_dash_delta_buf, sizeof(s_dash_delta_buf),
-             s_delta >= 0 ? "+%d.%d" : "-%d.%d", whole, frac);
-  } else {
-    snprintf(s_dash_delta_buf, sizeof(s_dash_delta_buf),
-             s_delta >= 0 ? "+%ld" : "%ld", (long)s_delta);
+  static TextLayer *s_dash_trend_name_layer;
+  ```
+
+- [ ] 3.2 In `main_window_load()`, after the `s_dash_unit_layer` creation block:
+  ```c
+  s_dash_trend_name_layer = text_layer_create(GRect(0, 0, 96, 14));
+  text_layer_set_background_color(s_dash_trend_name_layer, GColorClear);
+  text_layer_set_text_color(s_dash_trend_name_layer, CLR_STATE_INACTIVE);
+  text_layer_set_font(s_dash_trend_name_layer,
+    fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  text_layer_set_text_alignment(s_dash_trend_name_layer, GTextAlignmentLeft);
+  layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), true);
+  layer_add_child(s_window_layer,
+    text_layer_get_layer(s_dash_trend_name_layer));
+  ```
+
+- [ ] 3.3 In `main_window_unload()`, after `s_dash_unit_layer` destroy:
+  ```c
+  if (s_dash_trend_name_layer) {
+    text_layer_destroy(s_dash_trend_name_layer);
+    s_dash_trend_name_layer = NULL;
   }
-  if (s_dash_delta_layer) {
-    text_layer_set_text(s_dash_delta_layer, s_dash_delta_buf);
-    text_layer_set_text_color(s_dash_delta_layer,
-      (stale || s_glucose == 0) ? GColorLightGray : cgm_color);
-  }
   ```
 
-- [ ] 4.2 Add freshness + zone label mutual-exclusion logic:
+## 4. Add trend_name() helper
+
+- [ ] 4.1 After the existing `trend_icon()` function (~line 310), add:
   ```c
-  // Freshness and zone label share y=210; exactly one visible or both hidden.
-  bool show_zone = !stale && s_glucose != 0 &&
-                   (zone == ZONE_LOW  || zone == ZONE_URGENT_LOW  ||
-                    zone == ZONE_HIGH || zone == ZONE_URGENT_HIGH);
-  bool show_fresh = !stale && s_glucose != 0 && !show_zone;
-
-  if (s_dash_zone_layer) {
-    layer_set_hidden(text_layer_get_layer(s_dash_zone_layer), !show_zone);
-    if (show_zone) {
-      bool is_hypo = (zone == ZONE_LOW || zone == ZONE_URGENT_LOW);
-      text_layer_set_text(s_dash_zone_layer, is_hypo ? "hypo." : "hyper.");
-      text_layer_set_text_color(s_dash_zone_layer, cgm_color);
-    }
-  }
-
-  static char s_dash_fresh_buf[8];
-  if (s_dash_fresh_layer) {
-    layer_set_hidden(text_layer_get_layer(s_dash_fresh_layer), !show_fresh);
-    if (show_fresh) {
-      int32_t mins = minutes_since_last_read();
-      snprintf(s_dash_fresh_buf, sizeof(s_dash_fresh_buf),
-               "\xe2\x80\xa2%ldm", (long)(mins < 99 ? mins : 99));
-      text_layer_set_text(s_dash_fresh_layer, s_dash_fresh_buf);
+  static const char* trend_name(GlucoseTrend t) {
+    switch (t) {
+      case TREND_DOUBLE_UP:       return "Rise++";
+      case TREND_SINGLE_UP:       return "Rising";
+      case TREND_FORTY_FIVE_UP:   return "Rising";
+      case TREND_FLAT:            return "Flat";
+      case TREND_FORTY_FIVE_DOWN: return "Falling";
+      case TREND_SINGLE_DOWN:     return "Falling";
+      case TREND_DOUBLE_DOWN:     return "Fall++";
+      default:                    return "--";
     }
   }
   ```
-  Note: `\xe2\x80\xa2` is the UTF-8 encoding of the bullet character "•".
 
-## 5. Update prv_layout_for_bounds() Dashboard branch
+## 5. Update update_display_dashboard() for trend name layer
 
-In `prv_layout_for_bounds()` Dashboard section, after the existing T2 and R2
-coordinate blocks (~line 1145 in main.c):
-
-- [ ] 5.1 T2 branch — add new layer frames after `s_dash_unit_layer` frame:
+- [ ] 5.1 In `update_display_dashboard()`, after the existing BT block, add
+  trend name population (layer is hidden on T2; populated but only made visible
+  on R2 via `prv_layout_for_bounds()`):
   ```c
-  if (s_dash_delta_layer)
-    layer_set_frame(text_layer_get_layer(s_dash_delta_layer), GRect(128, 196, 68, 14));
-  if (s_dash_fresh_layer)
-    layer_set_frame(text_layer_get_layer(s_dash_fresh_layer), GRect(128, 210, 68, 14));
-  if (s_dash_zone_layer)
-    layer_set_frame(text_layer_get_layer(s_dash_zone_layer), GRect(128, 210, 68, 14));
+  if (s_dash_trend_name_layer) {
+    bool stale = data_is_stale();  // already computed above — reuse local
+    const char *tname = (stale || s_glucose == 0)
+      ? "--" : trend_name((GlucoseTrend)s_trend);
+    text_layer_set_text(s_dash_trend_name_layer, tname);
+    text_layer_set_text_color(s_dash_trend_name_layer,
+      (stale || s_glucose == 0) ? CLR_STATE_INACTIVE : cgm_color);
+  }
+  ```
+  Note: `stale` and `cgm_color` are already in scope in `update_display_dashboard()`.
+
+## 6. Update prv_layout_for_bounds() R2 Dashboard branch
+
+In `prv_layout_for_bounds()`, inside the `if (dashboard)` → `else` (R2) branch
+(~line 1190 in main.c):
+
+- [ ] 6.1 Change `s_graph_layer` frame: height 76 → 60:
+  ```c
+  if (s_graph_layer)
+    layer_set_frame(s_graph_layer, GRect(30, 148, 150, 60));
   ```
 
-- [ ] 5.2 R2 branch — add delta only (fresh + zone not shown on R2 per layout.md):
+- [ ] 6.2 Reposition `s_dash_trend_name_layer` (row 1 left) and show it:
   ```c
-  if (s_dash_delta_layer)
-    layer_set_frame(text_layer_get_layer(s_dash_delta_layer), GRect(188, 214, 36, 14));
-  if (s_dash_fresh_layer)
-    layer_set_hidden(text_layer_get_layer(s_dash_fresh_layer), true);
-  if (s_dash_zone_layer)
-    layer_set_hidden(text_layer_get_layer(s_dash_zone_layer), true);
+  if (s_dash_trend_name_layer) {
+    layer_set_frame(text_layer_get_layer(s_dash_trend_name_layer),
+      GRect(42, 212, 96, 14));
+    layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), false);
+  }
   ```
 
-## 6. Destroy layers in main_window_unload()
-
-In `main_window_unload()`, after the existing `s_dash_unit_layer` destroy:
-
-- [ ] 6.1 Add in reverse creation order:
+- [ ] 6.3 Reposition `s_dash_unit_layer` to row 1 right:
   ```c
-  if (s_dash_zone_layer)  { text_layer_destroy(s_dash_zone_layer);  s_dash_zone_layer  = NULL; }
-  if (s_dash_fresh_layer) { text_layer_destroy(s_dash_fresh_layer); s_dash_fresh_layer = NULL; }
-  if (s_dash_delta_layer) { text_layer_destroy(s_dash_delta_layer); s_dash_delta_layer = NULL; }
+  if (s_dash_unit_layer)
+    layer_set_frame(text_layer_get_layer(s_dash_unit_layer),
+      GRect(142, 212, 76, 14));
   ```
+
+- [ ] 6.4 Reposition `s_dash_trend_layer` to row 2 left:
+  ```c
+  if (s_dash_trend_layer)
+    layer_set_frame(text_layer_get_layer(s_dash_trend_layer),
+      GRect(82, 226, 24, 20));
+  ```
+
+- [ ] 6.5 Reposition `s_dash_glucose_layer` to row 2 right:
+  ```c
+  if (s_dash_glucose_layer)
+    layer_set_frame(text_layer_get_layer(s_dash_glucose_layer),
+      GRect(110, 226, 70, 20));
+  ```
+
+- [ ] 6.6 Ensure trend, glucose, and unit frames that currently exist in the R2
+  branch (for the old x=188 sidebar) are removed / replaced by 6.3–6.5 above.
+  Delete old R2 frames for `s_dash_trend_layer`, `s_dash_glucose_layer`,
+  `s_dash_unit_layer` at x=188.
 
 ## 7. Build, install, and visual verification
 
 - [ ] 7.1 `pebble build` — zero warnings, zero errors on all 5 platforms
 - [ ] 7.2 `pebble install --emulator emery` — Dashboard layout, in-range data
-- [ ] 7.3 Screenshot T2 in-range: delta visible (e.g. "+8"), freshness "•3m", no zone label
-- [ ] 7.4 Screenshot T2 HIGH: glucose in yellow, delta in yellow, "hyper." label visible, freshness hidden
-- [ ] 7.5 Screenshot T2 LOW: glucose in orange, delta in orange, "hypo." label visible
-- [ ] 7.6 Screenshot T2 stale: all CGM layers show "--" or hidden, GColorLightGray color
-- [ ] 7.7 Screenshot T2 URGENT_HIGH: glucose in red, "hyper." in red
-- [ ] 7.8 `pebble install --emulator emery` — Quick View: slots + graph hidden, sidebar visible with delta
-- [ ] 7.9 `pebble install --emulator gabbro` — R2 Dashboard: delta visible at GRect(188,214,36,14)
-- [ ] 7.10 Screenshot R2 in-range: delta text not clipped at circular boundary
-- [ ] 7.11 Confirm HIGH zone is yellow (GColorChromeYellow) in both SLOT_CGM arc and sidebar
+- [ ] 7.3 Screenshot T2: graph threshold labels ("hyper 230", "hypo 65") visible
+- [ ] 7.4 Screenshot T2: HIGH glucose → sidebar text is yellow (GColorChromeYellow)
+- [ ] 7.5 Screenshot T2: LOW glucose → sidebar text is orange (CLR_STATE_WARNING)
+- [ ] 7.6 Screenshot T2: stale → sidebar shows "--" in GColorLightGray
+- [ ] 7.7 `pebble install --emulator gabbro` — Dashboard layout, in-range data
+- [ ] 7.8 Screenshot R2: CGM panel appears BELOW graph (not beside it)
+- [ ] 7.9 Screenshot R2: row 1 = "Flat  mg/dL", row 2 = "→  120" (or current trend)
+- [ ] 7.10 Screenshot R2: no text clipped at circular boundary
+- [ ] 7.11 Quick View T2: slots and graph hidden, sidebar still shows trend + glucose + unit
+- [ ] 7.12 Quick View R2: slots and graph hidden, below-graph panel still visible

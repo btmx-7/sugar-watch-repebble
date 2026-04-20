@@ -3,8 +3,10 @@
 ## Purpose
 
 Defines what the Dashboard layout MUST render and how it MUST respond to all
-data states on Time 2 (emery) and Round 2 (gabbro). All pixel values and font
-constants reference layout.md in this change.
+data states on Time 2 (emery) and Round 2 (gabbro). All data states — in-range,
+high, urgent-high, low, urgent-low, stale, disconnected — are identical to the
+Simple layout. Only the spatial arrangement of elements differs between layouts.
+All pixel values reference layout.md in this change.
 
 ---
 
@@ -12,35 +14,34 @@ constants reference layout.md in this change.
 
 ### Requirement: Top Widget Slots
 
-Dashboard MUST render exactly 3 widget slots (slot indices 0, 1, 2) in the
-slots zone (y=0..64 on T2, y=0..80 on R2). Slot index 3 MUST be hidden.
+Dashboard MUST render exactly 3 widget slots (indices 0, 1, 2) in the slots
+zone. Slot index 3 MUST always be hidden. Slots MUST be hidden in compact mode.
 
 #### Scenario: Three slots visible in normal mode
 
-- **WHEN** the layout is LAYOUT_DASHBOARD and Quick View is not active
-- **THEN** `s_slot_layer[0]`, `s_slot_layer[1]`, and `s_slot_layer[2]` are visible
-- **AND** `s_slot_layer[3]` is hidden
+- **WHEN** layout is LAYOUT_DASHBOARD and Quick View is not active
+- **THEN** `s_slot_layer[0..2]` are visible and `s_slot_layer[3]` is hidden
 
 #### Scenario: Slots hidden in compact mode
 
-- **WHEN** the layout is LAYOUT_DASHBOARD and Quick View is active (height < 185 px)
-- **THEN** all three top slots are hidden
-- **AND** the CGM sidebar remains fully visible
+- **WHEN** layout is LAYOUT_DASHBOARD and unobstructed height < 185 px
+- **THEN** `s_slot_layer[0..2]` are hidden
+- **AND** the CGM display (T2 sidebar or R2 below-graph panel) remains visible
 
 ---
 
 ### Requirement: Time Row
 
-Dashboard MUST display the current time as a single-row "HH:MM" string using
-`FONT_KEY_LECO_36_BOLD_NUMBERS`, centered horizontally in the time zone.
-12h/24h format MUST follow `clock_is_24h_style()`.
+Dashboard MUST display the current time as a single-row string using
+`FONT_KEY_LECO_36_BOLD_NUMBERS`, centered in the time zone.
+Format follows `clock_is_24h_style()`.
 
-#### Scenario: Time renders in 24h format
+#### Scenario: 24h time
 
 - **WHEN** `clock_is_24h_style()` is true and the time is 14:05
 - **THEN** `s_dash_time_layer` shows "14:05"
 
-#### Scenario: Time renders in 12h format
+#### Scenario: 12h time
 
 - **WHEN** `clock_is_24h_style()` is false and the time is 14:05
 - **THEN** `s_dash_time_layer` shows "02:05"
@@ -49,232 +50,162 @@ Dashboard MUST display the current time as a single-row "HH:MM" string using
 
 ### Requirement: BT Icon
 
-Dashboard MUST display a Bluetooth status icon (Material Symbol) to the left
-of the time, using the filled glyph when connected and the outlined glyph when
-disconnected.
+Dashboard MUST display a Bluetooth status icon using the filled glyph when
+connected and the outlined glyph when disconnected.
 
 #### Scenario: BT connected
 
 - **WHEN** `connection_service_peek_pebble_app_connection()` is true
-- **THEN** `s_dash_bt_layer` renders `ICON_BT_CONNECTED` in `CLR_ICON_DEFAULT`
+- **THEN** `s_dash_bt_layer` shows `ICON_BT_CONNECTED` in `CLR_ICON_DEFAULT`
 
 #### Scenario: BT disconnected
 
 - **WHEN** `connection_service_peek_pebble_app_connection()` is false
-- **THEN** `s_dash_bt_layer` renders `ICON_BT_DISCONNECTED` in `CLR_STATE_DISABLED`
-
----
-
-### Requirement: Date Display
-
-Dashboard MUST show the current day-of-month and month number as two stacked
-GOTHIC_14 labels in `CLR_TEXT_SUBTLE`, right-aligned to the right edge of the
-time zone.
-
-#### Scenario: Date renders correctly
-
-- **WHEN** the date is April 20
-- **THEN** `s_dash_day_layer` shows "20" and `s_dash_month_layer` shows "4"
+- **THEN** `s_dash_bt_layer` shows `ICON_BT_DISCONNECTED` in `CLR_STATE_DISABLED`
 
 ---
 
 ### Requirement: Sparkline Graph
 
-Dashboard MUST render the sparkline graph in the left portion of the cgm-panel
-zone. The graph MUST be hidden in compact mode. The graph draw proc MUST draw
-threshold lines using `GColorOrange` for `low_thresh` and `GColorChromeYellow`
-for `high_thresh`.
+Dashboard MUST render the sparkline graph in the graph zone. The graph MUST
+be hidden in compact mode.
 
 #### Scenario: Graph visible in normal mode
 
 - **WHEN** layout is LAYOUT_DASHBOARD and Quick View is not active
-- **THEN** `s_graph_layer` is visible and `layer_mark_dirty` is called on each
-  `update_display()` call
+- **THEN** `s_graph_layer` is visible and marked dirty on each `update_display()` call
 
 #### Scenario: Graph hidden in compact mode
 
-- **WHEN** layout is LAYOUT_DASHBOARD and Quick View is active
+- **WHEN** Quick View is active
 - **THEN** `s_graph_layer` is hidden
 
 ---
 
-### Requirement: CGM Sidebar Zone Color
+### Requirement: Graph Threshold Labels
 
-All CGM sidebar elements that carry glucose state (trend, glucose value, delta)
-MUST use a single `cgm_color` derived from `zone_color(zone)` when data is
-fresh, or `GColorLightGray` when stale or absent.
+`graph_layer_update_proc` MUST render text labels alongside the high and low
+threshold lines using `graphics_draw_text()`:
+- "hyper" left-aligned above the high threshold line
+- High threshold value (e.g. "230") right-aligned above the high threshold line
+- "hypo" left-aligned below the low threshold line
+- Low threshold value (e.g. "65") right-aligned below the low threshold line
 
-The `zone_color()` function MUST map glucose zones to colors as follows:
+All four labels use `FONT_KEY_GOTHIC_14` in `GColorLightGray`.
+Labels MUST only be drawn when the threshold falls within the visible y range
+(condition already guarded by the existing line-draw `if` block).
 
-| Zone | Color | Token |
-|---|---|---|
-| ZONE_URGENT_LOW | `CLR_STATE_DANGER` | #FF0000 |
-| ZONE_LOW | `CLR_STATE_WARNING` | #FFAA00 |
-| ZONE_IN_RANGE | `CLR_ICON_DEFAULT` | #55FFFF |
-| ZONE_HIGH | `GColorChromeYellow` | #FFFF00 |
-| ZONE_URGENT_HIGH | `CLR_STATE_DANGER` | #FF0000 |
-| ZONE_UNKNOWN | `CLR_STATE_INACTIVE` | #AAAAAA |
+#### Scenario: Threshold labels visible when thresholds in range
 
-#### Scenario: In-range glucose color
+- **WHEN** `s_settings.high_thresh` is 230 and falls within `[min_val, max_val]`
+- **THEN** "hyper" appears left-aligned above the high threshold line
+- **AND** "230" appears right-aligned at the same y position
 
-- **WHEN** `s_glucose` is 110 mg/dL (in range) and data is fresh
-- **THEN** trend, glucose, and delta layers all use `CLR_ICON_DEFAULT`
+#### Scenario: Low threshold label
 
-#### Scenario: HIGH zone color is distinct from LOW
+- **WHEN** `s_settings.low_thresh` is 65 and falls within `[min_val, max_val]`
+- **THEN** "hypo" appears left-aligned below the low threshold line
+- **AND** "65" appears right-aligned at the same y position
 
-- **WHEN** `s_glucose` is 220 mg/dL (high) and data is fresh
-- **THEN** trend, glucose, and delta layers use `GColorChromeYellow`
-- **AND** NOT `CLR_STATE_WARNING` (orange)
+#### Scenario: Labels absent when threshold out of visible range
 
-#### Scenario: LOW zone color
-
-- **WHEN** `s_glucose` is 65 mg/dL (low) and data is fresh
-- **THEN** trend, glucose, and delta layers use `CLR_STATE_WARNING`
-
-#### Scenario: Stale data color override
-
-- **WHEN** `data_is_stale()` is true (last read > 15 minutes ago)
-- **THEN** trend, glucose, and delta layers all use `GColorLightGray`
+- **WHEN** `s_settings.high_thresh` is outside `[min_val, max_val]`
+- **THEN** no "hyper" label is drawn (consistent with existing line suppression)
 
 ---
 
-### Requirement: Trend Arrow
+### Requirement: CGM Zone Color
 
-Dashboard MUST display the current glucose trend as a Material Symbol glyph
-in `s_dash_trend_layer`, zone-colored, right-aligned.
+All CGM elements that carry glucose state (trend icon, glucose value) MUST use
+`cgm_color` = `zone_color(zone)` when data is fresh, or `GColorLightGray` when
+stale or absent. `zone_color()` MUST map zones as follows:
 
-#### Scenario: Trend icon for SingleUp
+| Zone | Return value |
+|---|---|
+| ZONE_URGENT_LOW | CLR_STATE_DANGER |
+| ZONE_LOW | CLR_STATE_WARNING |
+| ZONE_IN_RANGE | CLR_ICON_DEFAULT |
+| ZONE_HIGH | **GColorChromeYellow** |
+| ZONE_URGENT_HIGH | CLR_STATE_DANGER |
+| ZONE_UNKNOWN | CLR_STATE_INACTIVE |
 
-- **WHEN** `s_trend` is `TREND_SINGLE_UP` and data is fresh
-- **THEN** `s_dash_trend_layer` renders `ICON_TREND_SINGLE_UP` in `cgm_color`
+#### Scenario: HIGH zone is yellow, distinct from LOW
 
-#### Scenario: No trend when data absent
+- **WHEN** `s_glucose` is 220 mg/dL (ZONE_HIGH) and data is fresh
+- **THEN** `cgm_color` is `GColorChromeYellow`
+- **AND NOT** `CLR_STATE_WARNING` (orange)
 
-- **WHEN** `s_glucose` is 0
-- **THEN** `s_dash_trend_layer` text is empty string ""
+#### Scenario: LOW zone is orange
 
----
+- **WHEN** `s_glucose` is 65 mg/dL (ZONE_LOW) and data is fresh
+- **THEN** `cgm_color` is `CLR_STATE_WARNING`
 
-### Requirement: Glucose Value
-
-Dashboard MUST display the current glucose value in `s_dash_glucose_layer`
-using `FONT_KEY_GOTHIC_24_BOLD`. Format follows `format_glucose()` (mg/dL or
-mmol/L per `s_settings.use_mmol`). Show "--" when stale or absent.
-
-#### Scenario: In-range glucose value in mg/dL
-
-- **WHEN** `s_glucose` is 110 and `use_mmol` is false and data is fresh
-- **THEN** `s_dash_glucose_layer` shows "110" in `CLR_ICON_DEFAULT`
-
-#### Scenario: In-range glucose value in mmol/L
-
-- **WHEN** `s_glucose` is 110 and `use_mmol` is true and data is fresh
-- **THEN** `s_dash_glucose_layer` shows "6.1" (110 × 0.0555)
-
-#### Scenario: Stale data shows placeholder
+#### Scenario: Stale overrides zone color
 
 - **WHEN** `data_is_stale()` is true
+- **THEN** `cgm_color` is `GColorLightGray` regardless of zone
+
+---
+
+### Requirement: T2 CGM Sidebar
+
+On Time 2, Dashboard MUST render a vertical CGM sidebar to the right of the
+graph containing trend icon, glucose value, and unit label — in that order,
+top to bottom. Frames per layout.md T2 table.
+
+#### Scenario: T2 in-range sidebar
+
+- **WHEN** platform is T2, `s_glucose` is 120, zone is IN_RANGE, data is fresh
+- **THEN** `s_dash_trend_layer` shows the trend arrow glyph in `CLR_ICON_DEFAULT`
+- **AND** `s_dash_glucose_layer` shows "120" in `CLR_ICON_DEFAULT`
+- **AND** `s_dash_unit_layer` shows "mg/dL" in `GColorMediumAquamarine`
+
+#### Scenario: T2 stale state
+
+- **WHEN** platform is T2 and `data_is_stale()` is true
 - **THEN** `s_dash_glucose_layer` shows "--" in `GColorLightGray`
+- **AND** `s_dash_trend_layer` text is empty string ""
 
 ---
 
-### Requirement: Unit Label
+### Requirement: R2 Below-Graph CGM Panel
 
-Dashboard MUST display the active unit ("mg/dL" or "mmol/L") in
-`s_dash_unit_layer` using `FONT_KEY_GOTHIC_14` in `GColorMediumAquamarine`,
-right-aligned below the glucose value.
+On Round 2, Dashboard MUST render the CGM panel in two rows directly below the
+graph. The graph height MUST be 60 px (not 76 px) to provide space for the
+panel. Frames per layout.md R2 table.
 
-#### Scenario: Unit label matches setting
+**Row 1** (y=212): trend name text (left) + unit label (right)
+**Row 2** (y=226): trend icon glyph (left) + glucose value (right)
 
-- **WHEN** `s_settings.use_mmol` is false
-- **THEN** `s_dash_unit_layer` shows "mg/dL"
+Trend name text is produced by a `trend_name()` helper returning:
+`"Rise++"`, `"Rising"`, `"Rising"`, `"Flat"`, `"Falling"`, `"Falling"`,
+`"Fall++"` for TREND_DOUBLE_UP through TREND_DOUBLE_DOWN respectively;
+`"--"` for TREND_NONE or when stale.
 
----
+`s_dash_trend_name_layer` MUST be hidden on T2 and visible on R2.
 
-### Requirement: Delta Value
+#### Scenario: R2 in-range Flat state
 
-Dashboard MUST display the glucose rate-of-change (delta) in
-`s_dash_delta_layer` using `FONT_KEY_GOTHIC_14`, zone-colored, right-aligned
-below the unit label. Format: "+N" / "-N" in mg/dL or "+N.N" / "-N.N" in
-mmol/L. Show "--" when stale or absent.
+- **WHEN** platform is R2, `s_glucose` is 120, `s_trend` is TREND_FLAT, data is fresh
+- **THEN** `s_dash_trend_name_layer` shows "Flat" (row 1 left)
+- **AND** `s_dash_unit_layer` shows "mg/dL" (row 1 right, GColorMediumAquamarine)
+- **AND** `s_dash_trend_layer` shows the flat arrow glyph (row 2 left, CLR_ICON_DEFAULT)
+- **AND** `s_dash_glucose_layer` shows "120" (row 2 right, CLR_ICON_DEFAULT)
 
-Buffer size: worst case "-399" + null = 5 bytes minimum; use char buf[8].
+#### Scenario: R2 HIGH state
 
-#### Scenario: Positive delta in mg/dL
+- **WHEN** platform is R2 and zone is ZONE_HIGH
+- **THEN** trend name, trend glyph, and glucose value all use `GColorChromeYellow`
 
-- **WHEN** `s_delta` is +8 mg/dL and `use_mmol` is false and data is fresh
-- **THEN** `s_dash_delta_layer` shows "+8"
+#### Scenario: R2 stale state
 
-#### Scenario: Negative delta in mmol/L
+- **WHEN** platform is R2 and `data_is_stale()` is true
+- **THEN** `s_dash_trend_name_layer` shows "--" in `CLR_STATE_INACTIVE`
+- **AND** `s_dash_glucose_layer` shows "--" in `GColorLightGray`
+- **AND** `s_dash_trend_layer` text is empty string ""
 
-- **WHEN** `s_delta` is -8 mg/dL and `use_mmol` is true and data is fresh
-- **THEN** `s_dash_delta_layer` shows "-0.4"
-- **AND** does NOT show "0.-4"
+#### Scenario: R2 content stays within circular boundary
 
-#### Scenario: Delta hidden when stale
-
-- **WHEN** `data_is_stale()` is true
-- **THEN** `s_dash_delta_layer` shows "--" in `GColorLightGray`
-
-#### Scenario: R2 delta visible
-
-- **WHEN** the platform is Round 2 (bounds.size.w == 260)
-- **THEN** `s_dash_delta_layer` frame is GRect(188,214,36,14)
-- **AND** content renders without clipping at the circular boundary
-
----
-
-### Requirement: Freshness Indicator
-
-On Time 2, Dashboard MUST display a compact freshness indicator in
-`s_dash_fresh_layer` (GOTHIC_14, `CLR_STATE_INACTIVE`, right-aligned) when
-glucose zone is IN_RANGE. Format: "•Xm" where X = `minutes_since_last_read()`.
-`s_dash_fresh_layer` MUST be hidden when the zone is out of range (zone label
-takes priority at the same position).
-
-#### Scenario: Freshness shows when in range
-
-- **WHEN** zone is ZONE_IN_RANGE and last read was 3 minutes ago
-- **THEN** `s_dash_fresh_layer` shows "•3m" and `s_dash_zone_layer` is hidden
-
-#### Scenario: Freshness hidden when out of range
-
-- **WHEN** zone is ZONE_HIGH or ZONE_LOW or URGENT
-- **THEN** `s_dash_fresh_layer` is hidden and `s_dash_zone_layer` is visible
-
-#### Scenario: Freshness hidden when stale
-
-- **WHEN** `data_is_stale()` is true
-- **THEN** both `s_dash_fresh_layer` and `s_dash_zone_layer` are hidden (glucose
-  value and trend already communicate stale state via `GColorLightGray`)
-
----
-
-### Requirement: Zone Accessibility Label
-
-On Time 2, Dashboard MUST display a zone label in `s_dash_zone_layer` (GOTHIC_14,
-zone-colored, right-aligned) when glucose is out of range. Labels:
-- `ZONE_URGENT_LOW` or `ZONE_LOW`: "hypo."
-- `ZONE_URGENT_HIGH` or `ZONE_HIGH`: "hyper."
-- `ZONE_IN_RANGE` or `ZONE_UNKNOWN`: hidden
-
-`s_dash_zone_layer` shares position y=210 with `s_dash_fresh_layer`; exactly one
-MUST be visible at a time (or both hidden when stale).
-
-#### Scenario: Zone label shows hypo
-
-- **WHEN** zone is ZONE_LOW or ZONE_URGENT_LOW and data is fresh
-- **THEN** `s_dash_zone_layer` shows "hypo." in `cgm_color`
-- **AND** `s_dash_fresh_layer` is hidden
-
-#### Scenario: Zone label shows hyper
-
-- **WHEN** zone is ZONE_HIGH or ZONE_URGENT_HIGH and data is fresh
-- **THEN** `s_dash_zone_layer` shows "hyper." in `cgm_color`
-- **AND** `s_dash_fresh_layer` is hidden
-
-#### Scenario: Zone label hidden when in range
-
-- **WHEN** zone is ZONE_IN_RANGE
-- **THEN** `s_dash_zone_layer` is hidden
-- **AND** `s_dash_fresh_layer` is visible
+- **WHEN** platform is R2
+- **THEN** row 2 content (x=82..180, y=226..246) does not clip against the
+  inscribed circle boundary (x_min ≈ 77, x_max ≈ 183 at y=246) ✓
