@@ -257,9 +257,10 @@ static TextLayer *s_dash_time_layer;
 static TextLayer *s_dash_day_layer;
 static TextLayer *s_dash_month_layer;
 static TextLayer *s_dash_bt_layer;
-static TextLayer *s_dash_trend_layer;   // trend icon (Material Symbol)
-static TextLayer *s_dash_glucose_layer; // glucose value
-static TextLayer *s_dash_unit_layer;    // unit label
+static TextLayer *s_dash_trend_layer;      // trend icon (Material Symbol)
+static TextLayer *s_dash_glucose_layer;    // glucose value
+static TextLayer *s_dash_unit_layer;       // unit label
+static TextLayer *s_dash_trend_name_layer; // R2 only: trend name text ("Flat", "Rising", …)
 
 // ─── Helpers: Zone ───────────────────────────────────────────────────────────
 
@@ -277,7 +278,7 @@ static GColor zone_color(GlucoseZone zone) {
     case ZONE_URGENT_LOW:  return CLR_STATE_DANGER;
     case ZONE_LOW:         return CLR_STATE_WARNING;
     case ZONE_IN_RANGE:    return CLR_ICON_DEFAULT;
-    case ZONE_HIGH:        return CLR_STATE_WARNING;
+    case ZONE_HIGH:        return GColorChromeYellow;
     case ZONE_URGENT_HIGH: return CLR_STATE_DANGER;
     default:               return CLR_STATE_INACTIVE;
   }
@@ -320,6 +321,19 @@ static const char* trend_icon(GlucoseTrend t) {
   }
 }
 
+static const char* trend_name(GlucoseTrend t) {
+  switch (t) {
+    case TREND_DOUBLE_UP:       return "Rise++";
+    case TREND_SINGLE_UP:       return "Rising";
+    case TREND_FORTY_FIVE_UP:   return "Rising";
+    case TREND_FLAT:            return "Flat";
+    case TREND_FORTY_FIVE_DOWN: return "Falling";
+    case TREND_SINGLE_DOWN:     return "Falling";
+    case TREND_DOUBLE_DOWN:     return "Fall++";
+    default:                    return "--";
+  }
+}
+
 // ─── Graph Layer Draw Proc ───────────────────────────────────────────────────
 
 static void graph_layer_update_proc(Layer *layer, GContext *ctx) {
@@ -350,17 +364,37 @@ static void graph_layer_update_proc(Layer *layer, GContext *ctx) {
 
   #define VAL_TO_Y(v) (h - 1 - ((v - min_val) * (h - 1) / range))
 
+  GFont lbl = fonts_get_system_font(FONT_KEY_GOTHIC_14);
+
   if (s_settings.low_thresh >= min_val && s_settings.low_thresh <= max_val) {
     int ly = VAL_TO_Y(s_settings.low_thresh);
     graphics_context_set_stroke_color(ctx, GColorOrange);
     graphics_context_set_stroke_width(ctx, 1);
     for (int x = 0; x < w; x += 4) { graphics_draw_pixel(ctx, GPoint(x, ly)); graphics_draw_pixel(ctx, GPoint(x+1, ly)); }
+    if (ly + 14 <= h) {
+      char l_buf[8];
+      snprintf(l_buf, sizeof(l_buf), "%d", (int)s_settings.low_thresh);
+      graphics_context_set_text_color(ctx, GColorLightGray);
+      graphics_draw_text(ctx, "hypo", lbl, GRect(1, ly + 1, w / 2, 13),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+      graphics_draw_text(ctx, l_buf, lbl, GRect(w / 2, ly + 1, w / 2, 13),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+    }
   }
 
   if (s_settings.high_thresh >= min_val && s_settings.high_thresh <= max_val) {
     int hy = VAL_TO_Y(s_settings.high_thresh);
     graphics_context_set_stroke_color(ctx, GColorChromeYellow);
     for (int x = 0; x < w; x += 4) { graphics_draw_pixel(ctx, GPoint(x, hy)); graphics_draw_pixel(ctx, GPoint(x+1, hy)); }
+    if (hy >= 13) {
+      char h_buf[8];
+      snprintf(h_buf, sizeof(h_buf), "%d", (int)s_settings.high_thresh);
+      graphics_context_set_text_color(ctx, GColorLightGray);
+      graphics_draw_text(ctx, "hyper", lbl, GRect(1, hy - 13, w / 2, 13),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+      graphics_draw_text(ctx, h_buf, lbl, GRect(w / 2, hy - 13, w / 2, 13),
+        GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
+    }
   }
 
   int x_step = (w - 4) / (GRAPH_POINTS - 1);
@@ -804,6 +838,15 @@ static void update_display_dashboard(void) {
     text_layer_set_text(s_dash_unit_layer,
       s_settings.use_mmol ? "mmol/L" : "mg/dL");
   }
+
+  // Trend name — R2 below-graph panel row 1 (hidden on T2 via layout)
+  if (s_dash_trend_name_layer) {
+    const char *tname = (stale || s_glucose == 0)
+      ? "--" : trend_name((GlucoseTrend)s_trend);
+    text_layer_set_text(s_dash_trend_name_layer, tname);
+    text_layer_set_text_color(s_dash_trend_name_layer,
+      (stale || s_glucose == 0) ? CLR_STATE_INACTIVE : cgm_color);
+  }
 }
 
 static void update_display(void) {
@@ -1015,9 +1058,11 @@ void prv_layout_for_bounds(GRect bounds) {
   if (s_dash_day_layer)     layer_set_hidden(text_layer_get_layer(s_dash_day_layer),     !show_dashboard);
   if (s_dash_month_layer)   layer_set_hidden(text_layer_get_layer(s_dash_month_layer),   !show_dashboard);
   if (s_dash_bt_layer)      layer_set_hidden(text_layer_get_layer(s_dash_bt_layer),      !show_dashboard);
-  if (s_dash_trend_layer)   layer_set_hidden(text_layer_get_layer(s_dash_trend_layer),   !show_dashboard);
-  if (s_dash_glucose_layer) layer_set_hidden(text_layer_get_layer(s_dash_glucose_layer), !show_dashboard);
-  if (s_dash_unit_layer)    layer_set_hidden(text_layer_get_layer(s_dash_unit_layer),    !show_dashboard);
+  if (s_dash_trend_layer)      layer_set_hidden(text_layer_get_layer(s_dash_trend_layer),      !show_dashboard);
+  if (s_dash_glucose_layer)    layer_set_hidden(text_layer_get_layer(s_dash_glucose_layer),    !show_dashboard);
+  if (s_dash_unit_layer)       layer_set_hidden(text_layer_get_layer(s_dash_unit_layer),       !show_dashboard);
+  // trend_name: R2 Dashboard only — T2 and Simple branches will re-hide if needed
+  if (s_dash_trend_name_layer) layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), !show_dashboard);
 
   // Graph: visible in Dashboard (non-compact), hidden in Simple and compact Dashboard
   bool show_graph = (dashboard && !compact);
@@ -1186,6 +1231,9 @@ void prv_layout_for_bounds(GRect bounds) {
       // Unit
       if (s_dash_unit_layer)
         layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(128, 182, 68, 14));
+      // Trend name: T2 uses right sidebar only — keep hidden
+      if (s_dash_trend_name_layer)
+        layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), true);
 
     } else {
       // R2: 260x260
@@ -1212,14 +1260,25 @@ void prv_layout_for_bounds(GRect bounds) {
       if (s_dash_month_layer)
         layer_set_frame(text_layer_get_layer(s_dash_month_layer), GRect(234, 108, 20, 14));
 
+      // Graph: height reduced 76→60 to make room for below-graph CGM panel
       if (s_graph_layer)
-        layer_set_frame(s_graph_layer, GRect(30, 148, 150, 76));
-      if (s_dash_trend_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(188, 148, 42, 20));
-      if (s_dash_glucose_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(188, 170, 42, 30));
+        layer_set_frame(s_graph_layer, GRect(30, 148, 150, 60));
+
+      // Below-graph CGM panel (2 rows, centered within inscribed circle)
+      // Row 1 (y=212): trend name (left) + unit (right)
+      if (s_dash_trend_name_layer) {
+        layer_set_frame(text_layer_get_layer(s_dash_trend_name_layer),
+          GRect(42, 212, 96, 14));
+        layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), false);
+      }
       if (s_dash_unit_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(188, 200, 42, 14));
+        layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(142, 212, 76, 14));
+      // Row 2 (y=226): trend icon (left) + glucose value (right)
+      // Boundary at y=246: x ≈ 77..183 — content x=82..180 fits ✓
+      if (s_dash_trend_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(82, 226, 24, 20));
+      if (s_dash_glucose_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(110, 226, 70, 20));
     }
   }
 
@@ -1380,6 +1439,14 @@ static void main_window_load(Window *window) {
   text_layer_set_text_alignment(s_dash_unit_layer, GTextAlignmentRight);
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_unit_layer));
 
+  s_dash_trend_name_layer = text_layer_create(GRect(0, 0, 96, 14));
+  text_layer_set_background_color(s_dash_trend_name_layer, GColorClear);
+  text_layer_set_text_color(s_dash_trend_name_layer, CLR_STATE_INACTIVE);
+  text_layer_set_font(s_dash_trend_name_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
+  text_layer_set_text_alignment(s_dash_trend_name_layer, GTextAlignmentLeft);
+  layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), true);
+  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_trend_name_layer));
+
   // ── Graph layer (dashboard only) ──
   s_graph_layer = layer_create(GRect(4, 130, 120, 80));
   layer_set_update_proc(s_graph_layer, graph_layer_update_proc);
@@ -1425,7 +1492,8 @@ static void main_window_unload(Window *window) {
   if (s_dash_month_layer)   { text_layer_destroy(s_dash_month_layer);   s_dash_month_layer   = NULL; }
   if (s_dash_trend_layer)   { text_layer_destroy(s_dash_trend_layer);   s_dash_trend_layer   = NULL; }
   if (s_dash_glucose_layer) { text_layer_destroy(s_dash_glucose_layer); s_dash_glucose_layer = NULL; }
-  if (s_dash_unit_layer)    { text_layer_destroy(s_dash_unit_layer);    s_dash_unit_layer    = NULL; }
+  if (s_dash_unit_layer)       { text_layer_destroy(s_dash_unit_layer);       s_dash_unit_layer       = NULL; }
+  if (s_dash_trend_name_layer) { text_layer_destroy(s_dash_trend_name_layer); s_dash_trend_name_layer = NULL; }
 
   // Shared
   if (s_graph_layer) { layer_destroy(s_graph_layer); s_graph_layer = NULL; }
