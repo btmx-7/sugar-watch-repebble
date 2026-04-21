@@ -1275,10 +1275,14 @@ void prv_layout_for_bounds(GRect bounds) {
         layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(142, 212, 76, 14));
       // Row 2 (y=226): trend icon (left) + glucose value (right)
       // Boundary at y=246: x ≈ 77..183 — content x=82..180 fits ✓
-      if (s_dash_trend_layer)
+      if (s_dash_trend_layer) {
         layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(82, 226, 24, 20));
-      if (s_dash_glucose_layer)
+        text_layer_set_text_alignment(s_dash_trend_layer, GTextAlignmentCenter);
+      }
+      if (s_dash_glucose_layer) {
         layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(110, 226, 70, 20));
+        text_layer_set_text_alignment(s_dash_glucose_layer, GTextAlignmentLeft);
+      }
     }
   }
 
