@@ -839,13 +839,12 @@ static void update_display_dashboard(void) {
       s_settings.use_mmol ? "mmol/L" : "mg/dL");
   }
 
-  // Trend name — R2 below-graph panel row 1 (hidden on T2 via layout)
   if (s_dash_trend_name_layer) {
-    const char *tname = (stale || s_glucose == 0)
-      ? "--" : trend_name((GlucoseTrend)s_trend);
-    text_layer_set_text(s_dash_trend_name_layer, tname);
+    bool inactive = stale || s_glucose == 0;
+    text_layer_set_text(s_dash_trend_name_layer,
+      inactive ? "--" : trend_name((GlucoseTrend)s_trend));
     text_layer_set_text_color(s_dash_trend_name_layer,
-      (stale || s_glucose == 0) ? CLR_STATE_INACTIVE : cgm_color);
+      inactive ? CLR_STATE_INACTIVE : cgm_color);
   }
 }
 
@@ -1264,8 +1263,6 @@ void prv_layout_for_bounds(GRect bounds) {
       if (s_graph_layer)
         layer_set_frame(s_graph_layer, GRect(30, 148, 150, 60));
 
-      // Below-graph CGM panel (2 rows, centered within inscribed circle)
-      // Row 1 (y=212): trend name (left) + unit (right)
       if (s_dash_trend_name_layer) {
         layer_set_frame(text_layer_get_layer(s_dash_trend_name_layer),
           GRect(42, 212, 96, 14));
@@ -1273,8 +1270,7 @@ void prv_layout_for_bounds(GRect bounds) {
       }
       if (s_dash_unit_layer)
         layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(142, 212, 76, 14));
-      // Row 2 (y=226): trend icon (left) + glucose value (right)
-      // Boundary at y=246: x ≈ 77..183 — content x=82..180 fits ✓
+      // x=82..180 at y=246 fits within R2 inscribed circle (x_min≈77, x_max≈183)
       if (s_dash_trend_layer) {
         layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(82, 226, 24, 20));
         text_layer_set_text_alignment(s_dash_trend_layer, GTextAlignmentCenter);
