@@ -54,22 +54,25 @@ x ≈ 77..183 (106 px). All CGM content on R2 must fit within this envelope.
 | s_dash_unit_layer `[corrected R2]` | TextLayer | GOTHIC_14 | GColorMediumAquamarine |
 | s_dash_trend_name_layer `[NEW]` | TextLayer | GOTHIC_14 | CLR_STATE_INACTIVE |
 
-### Time 2 — exact frames (all existing, no changes)
+### Time 2 — exact frames
 
-| Layer | Frame (x,y,w,h) | Align |
-|---|---|---|
-| s_slot_layer[0] | GRect(4,4,56,56) | — |
-| s_slot_layer[1] | GRect(72,4,56,56) | — |
-| s_slot_layer[2] | GRect(140,4,56,56) | — |
-| s_dash_time_layer | GRect(24,76,144,44) | Center |
-| s_dash_bt_layer | GRect(4,80,16,16) | Center |
-| s_dash_day_layer | GRect(176,74,20,14) | Right |
-| s_dash_month_layer | GRect(176,94,20,14) | Right |
-| s_graph_layer | GRect(4,130,120,80) | — |
-| s_dash_trend_layer | GRect(128,130,68,20) | Right |
-| s_dash_glucose_layer | GRect(128,152,68,30) | Right |
-| s_dash_unit_layer | GRect(128,182,68,14) | Right |
-| s_dash_trend_name_layer | hidden | — |
+| Layer | Frame (x,y,w,h) | Align | Note |
+|---|---|---|---|
+| s_slot_layer[0] | GRect(4,4,56,56) | — | existing |
+| s_slot_layer[1] | GRect(72,4,56,56) | — | existing |
+| s_slot_layer[2] | GRect(140,4,56,56) | — | existing |
+| s_dash_time_layer | GRect(24,76,144,44) | Center | existing |
+| s_dash_bt_layer | GRect(4,80,16,16) | Center | existing |
+| s_dash_day_layer | GRect(176,74,20,14) | Right | existing |
+| s_dash_month_layer | GRect(176,94,20,14) | Right | existing |
+| s_graph_layer | GRect(4,130,120,80) | — | existing |
+| s_dash_trend_name_layer | GRect(128,130,68,14) | Right | `[corrected]` row 1 visible (was hidden) |
+| s_dash_trend_layer | GRect(128,146,68,18) | Right | `[corrected]` row 2 (y 130→146) |
+| s_dash_glucose_layer | GRect(128,162,68,30) | Right | `[corrected]` row 3 (y 152→162) |
+| s_dash_unit_layer | GRect(128,192,68,14) | Right | `[corrected]` row 4 (y 182→192) |
+
+Rationale: Figma exports (`Dashboard_T2-1..5`) show a 4-row sidebar stack. The
+trend-name row is visible on T2, not only R2 as the original proposal assumed.
 
 ### Round 2 — exact frames (`[corrected]` = changed from current code)
 
@@ -83,13 +86,15 @@ x ≈ 77..183 (106 px). All CGM content on R2 must fit within this envelope.
 | s_dash_day_layer | GRect(234,88,20,14) | Right | existing |
 | s_dash_month_layer | GRect(234,108,20,14) | Right | existing |
 | s_graph_layer | GRect(30,148,150,**60**) | — | `[corrected]` height 76→60 |
-| s_dash_trend_name_layer | GRect(42,212,96,14) | Left | `[NEW]` trend text row 1 |
-| s_dash_unit_layer | GRect(142,212,76,14) | Right | `[corrected]` row 1 right |
-| s_dash_trend_layer | GRect(82,226,24,20) | Center | `[corrected]` row 2 left |
-| s_dash_glucose_layer | GRect(110,226,70,20) | Left | `[corrected]` row 2 right |
+| s_dash_trend_name_layer | GRect(40,210,86,14) | Right | `[corrected]` row 1 left half, meets unit at center |
+| s_dash_unit_layer | GRect(130,210,64,14) | Left | `[corrected]` row 1 right half |
+| s_dash_trend_layer | GRect(82,226,24,22) | Center | `[corrected]` row 2 left |
+| s_dash_glucose_layer | GRect(108,220,64,30) | Left | `[corrected]` row 2 right, h 20→30 for GOTHIC_24_BOLD |
 
-R2 boundary check at y=246 (bottom of row 2): x_min ≈ 77, x_max ≈ 183.
-Content spans x=82..180 — within boundary ✓
+R2 boundary check at y=252 (bottom of row 2): x_min ≈ 85, x_max ≈ 175.
+Row 1 sits at y=210..224 (wide band); row 2 trailing edge x=108+64=172 < 175 ✓.
+Row 1 pair is centered at x≈130 as a single visual group (Figma `Dashboard_R2-1..5`),
+not spread edge-to-edge. Row 2 uses height 30 so GOTHIC_24_BOLD digits do not clip.
 
 ---
 
@@ -100,14 +105,15 @@ No new layers required — rendered directly on the graph canvas.
 
 | Text | Position within layer | Font | Color |
 |---|---|---|---|
-| "hyper" | GRect(1, hy−13, w/2, 13) above high line | FONT_KEY_GOTHIC_14 | GColorLightGray |
-| high value ("230") | GRect(w/2, hy−13, w/2, 13) above high line | FONT_KEY_GOTHIC_14 | GColorLightGray |
-| "hypo" | GRect(1, ly+1, w/2, 13) below low line | FONT_KEY_GOTHIC_14 | GColorLightGray |
-| low value ("65") | GRect(w/2, ly+1, w/2, 13) below low line | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| "hyper" | above high line (falls back below if clipped at top) | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| high value ("230") | above high line (mirrors "hyper") | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| "hypo" | below low line (falls back above if clipped at bottom) | FONT_KEY_GOTHIC_14 | GColorLightGray |
+| low value ("65") | below low line (mirrors "hypo") | FONT_KEY_GOTHIC_14 | GColorLightGray |
 
 `hy` = `VAL_TO_Y(s_settings.high_thresh)`, `ly` = `VAL_TO_Y(s_settings.low_thresh)`.
-Guard: only draw if the threshold is within `[min_val, max_val]` (condition already
-present for line drawing — add text draw immediately after each existing line draw).
+Guard: only draw if the threshold is within `[min_val, max_val]`. Label y picks
+`above` or `below` based on available room — prevents hypo clipping when the
+low line sits near the graph's bottom edge (observed in every T2 state capture).
 
 ---
 
@@ -164,11 +170,11 @@ Time 2 (200 × 228)                          Compact / Quick View
 ├──────────────────────────────────────┤     │  [BT] HH:MM (LECO_36) [DD]           │
 │  [BT]  HH:MM (LECO_36)  [DD]        │     │        y=76               [MM]        │
 │         y=76              [MM]       │     ├──────────────────┬───────────────────┤
-├──────────────────┬───────────────────┤     │  (graph hidden)  │  [trend →]  y=130 │
-│  graph  120×80   │  [trend →]  y=130 │     │                  │  [glucose]  y=152 │
-│  y=130..210      │  [glucose]  y=152 │     │                  │  [unit]     y=182 │
-│  hyper---230---  │  [unit]     y=182 │     └──────────────────┴───────────────────┘
-│  hypo----65----  │                   │
+├──────────────────┬───────────────────┤     │  (graph hidden)  │  [name]    y=130 │
+│  graph  120×80   │  [name]     y=130 │     │                  │  [arrow]   y=146 │
+│  y=130..210      │  [arrow]    y=146 │     │                  │  [glucose] y=162 │
+│  hyper---230---  │  [glucose]  y=162 │     │                  │  [unit]    y=192 │
+│  hypo----65----  │  [unit]     y=192 │     └──────────────────┴───────────────────┘
 └──────────────────┴───────────────────┘
 
 Round 2 (260 × 260) — circular clip
@@ -182,7 +188,7 @@ Round 2 (260 × 260) — circular clip
 │     hyper-----------230-----------       │
 │     hypo-----------65-------------       │
 │                                          │
-│     [trend name]        [unit]   y=212   │
-│     [→ icon]    [glucose value]  y=226   │
+│       [trend name] [unit]        y=210   │
+│        [→] [glucose value]       y=222   │
 └──────────────────────────────────────────┘
 ```
