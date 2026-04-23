@@ -4,20 +4,41 @@ send_mock.py — Inject AppMessage mock data into a running Pebble emulator.
 
 Usage:
   python3 scripts/send_mock.py --emulator emery --state 1
-  python3 scripts/send_mock.py --emulator gabbro --state 3
+  python3 scripts/send_mock.py --emulator gabbro --state 11
 
-States:
+Simple layout states (layout=0):
   1 = in-range: glucose 110 flat, 22°C clear, HR 72, steps 6543
   2 = lower:    glucose 49 rising (hypo), -4°C snow, HR 48, steps 1200
   3 = bt-off:   stale CGM, -2°C snow cached, HR 52, steps 800
   4 = higher:   glucose 230 rapid fall, 38°C sunny, HR 165, steps 18500
   5 = error:    all stale/unavailable
+
+Dashboard layout states (layout=1):
+  Zone sweep (slots = {weather, battery, CGM}):
+    11 = d_inrange       glucose 110 flat
+    12 = d_urgent_low    glucose 45 double-down (urgent)
+    13 = d_low           glucose 65 single-down
+    14 = d_high          glucose 195 single-up  (yellow sidebar)
+    15 = d_urgent_high   glucose 270 double-up  (urgent)
+    16 = d_stale         stale CGM, trend none
+    17 = d_btoff         stale CGM + BT disconnected
+    18 = d_error         glucose 0, weather unavailable
+  Slot variations (in-range data, different 3-slot configs):
+    19 = d_slots_hr_steps_cgm      {HR, STEPS, CGM}
+    20 = d_slots_cgm_weather_bat   {CGM, WEATHER, BATTERY}
+    21 = d_slots_weather_hr_cgm    {WEATHER, HR, CGM}
+    22 = d_slots_battery_steps_cgm {BATTERY, STEPS, CGM}
 """
 
-import sys, struct, uuid, json, time, argparse
+import sys, struct, uuid, json, time, argparse, glob, os
 
-LIBPEBBLE_PATH = '/Users/mixbook/.local/pipx/venvs/pebble-tool/lib/python3.13/site-packages'
-sys.path.insert(0, LIBPEBBLE_PATH)
+# Resolve the pebble-tool pipx venv's site-packages dynamically so this works
+# regardless of which Python version pebble-tool is installed on (3.12, 3.13...).
+_PIPX_VENV = os.path.expanduser('~/.local/pipx/venvs/pebble-tool')
+_SITE_PKGS = sorted(glob.glob(os.path.join(_PIPX_VENV, 'lib', 'python*', 'site-packages')))
+if not _SITE_PKGS:
+    sys.exit(f'pebble-tool pipx venv not found under {_PIPX_VENV} — run: pipx install --python /opt/homebrew/bin/python3.12 pebble-tool')
+sys.path.insert(0, _SITE_PKGS[-1])
 
 from libpebble2.communication import PebbleConnection
 from libpebble2.communication.transports.websocket import WebsocketTransport
@@ -49,12 +70,27 @@ KEY_WEATHER_TMAX   = 18
 KEY_MOCK_HR        = 19
 KEY_MOCK_STEPS     = 20
 
-# Trend constants
-TREND_FLAT            = 0
-TREND_SINGLE_UP       = 2
+# Trend constants (GlucoseTrend in main.c)
+TREND_DOUBLE_UP       = 0
+TREND_SINGLE_UP       = 1
+TREND_FORTY_FIVE_UP   = 2
+TREND_FLAT            = 3
 TREND_FORTY_FIVE_DOWN = 4
+TREND_SINGLE_DOWN     = 5
 TREND_DOUBLE_DOWN     = 6
 TREND_NONE            = 7
+
+# Slot constants (SlotType in main.c)
+SLOT_NONE       = 0
+SLOT_BATTERY    = 1
+SLOT_WEATHER    = 2
+SLOT_HEART_RATE = 3
+SLOT_STEPS      = 4
+SLOT_CGM        = 5
+
+# Layout constants (WatchLayout in main.c)
+LAYOUT_SIMPLE    = 0
+LAYOUT_DASHBOARD = 1
 
 # Weather icon constants
 ICON_CLEAR   = 0
@@ -211,6 +247,305 @@ STATES = {
         KEY_MOCK_STEPS: 0,
         'graph': [0] * 36,
     },
+
+    # ── Dashboard layout states (layout=1, 3 slots) ─────────────────────────
+
+    # Helper defaults for dashboard zones: thresholds 70/180, urgent 55/250,
+    # mmol off, weather 22°C clear, HR 72, steps 6543.
+    # Slots default to {WEATHER, BATTERY, CGM} (slot[3] unused on dashboard).
+
+    11: {
+        'name': 'd_inrange',
+        KEY_GLUCOSE_VALUE:  110,
+        KEY_GLUCOSE_TREND:  TREND_FLAT,
+        KEY_GLUCOSE_DELTA:  2,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   15,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    72,
+        KEY_MOCK_STEPS: 6543,
+        'graph': [55] * 36,
+    },
+    12: {
+        'name': 'd_urgent_low',
+        KEY_GLUCOSE_VALUE:  45,
+        KEY_GLUCOSE_TREND:  TREND_DOUBLE_DOWN,
+        KEY_GLUCOSE_DELTA:  -15,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   10,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   4,
+        KEY_WEATHER_TMAX:   15,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    88,
+        KEY_MOCK_STEPS: 1234,
+        # Graph plunging into hypo
+        'graph': [max(20, 80 - i * 2) // 1 for i in range(36)],
+    },
+    13: {
+        'name': 'd_low',
+        KEY_GLUCOSE_VALUE:  65,
+        KEY_GLUCOSE_TREND:  TREND_SINGLE_DOWN,
+        KEY_GLUCOSE_DELTA:  -8,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   10,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   4,
+        KEY_WEATHER_TMAX:   15,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    72,
+        KEY_MOCK_STEPS: 3201,
+        'graph': [max(30, 90 - i) for i in range(36)],
+    },
+    14: {
+        'name': 'd_high',
+        KEY_GLUCOSE_VALUE:  195,
+        KEY_GLUCOSE_TREND:  TREND_SINGLE_UP,
+        KEY_GLUCOSE_DELTA:  10,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   16,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    95,
+        KEY_MOCK_STEPS: 8500,
+        'graph': [min(100, 60 + i * 2) for i in range(36)],
+    },
+    15: {
+        'name': 'd_urgent_high',
+        KEY_GLUCOSE_VALUE:  270,
+        KEY_GLUCOSE_TREND:  TREND_DOUBLE_UP,
+        KEY_GLUCOSE_DELTA:  18,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   16,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    110,
+        KEY_MOCK_STEPS: 12034,
+        'graph': [min(127, 80 + i * 2) for i in range(36)],
+    },
+    16: {
+        'name': 'd_stale',
+        KEY_GLUCOSE_VALUE:  120,
+        KEY_GLUCOSE_TREND:  TREND_NONE,
+        KEY_GLUCOSE_DELTA:  0,
+        KEY_LAST_READ_SEC:  0,   # stale sentinel
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   10,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   4,
+        KEY_WEATHER_TMAX:   15,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    70,
+        KEY_MOCK_STEPS: 2100,
+        'graph': [55] * 36,
+    },
+    17: {
+        'name': 'd_btoff',
+        KEY_GLUCOSE_VALUE:  72,
+        KEY_GLUCOSE_TREND:  TREND_FORTY_FIVE_DOWN,
+        KEY_GLUCOSE_DELTA:  -5,
+        KEY_LAST_READ_SEC:  0,   # stale sentinel (BT cut, no updates)
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   -2,
+        KEY_WEATHER_ICON:   ICON_SNOW,
+        KEY_WEATHER_TMIN:   -5,
+        KEY_WEATHER_TMAX:   3,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    52,
+        KEY_MOCK_STEPS: 800,
+        'graph': [0] * 36,
+    },
+    18: {
+        'name': 'd_error',
+        KEY_GLUCOSE_VALUE:  0,
+        KEY_GLUCOSE_TREND:  TREND_NONE,
+        KEY_GLUCOSE_DELTA:  0,
+        KEY_LAST_READ_SEC:  0,   # stale sentinel
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   -128,
+        KEY_WEATHER_ICON:   ICON_DEFAULT,
+        KEY_WEATHER_TMIN:   -128,
+        KEY_WEATHER_TMAX:   -128,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_BATTERY,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    0,
+        KEY_MOCK_STEPS: 0,
+        'graph': [0] * 36,
+    },
+
+    # ── Slot variations (in-range data, 3 slots swapped) ───────────────────
+
+    19: {
+        'name': 'd_slots_hr_steps_cgm',
+        KEY_GLUCOSE_VALUE:  110,
+        KEY_GLUCOSE_TREND:  TREND_FLAT,
+        KEY_GLUCOSE_DELTA:  2,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   15,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_HEART_RATE,
+        KEY_SLOT_1:  SLOT_STEPS,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    78,
+        KEY_MOCK_STEPS: 6842,
+        'graph': [55] * 36,
+    },
+    20: {
+        'name': 'd_slots_cgm_weather_bat',
+        KEY_GLUCOSE_VALUE:  110,
+        KEY_GLUCOSE_TREND:  TREND_FLAT,
+        KEY_GLUCOSE_DELTA:  2,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   15,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_CGM,
+        KEY_SLOT_1:  SLOT_WEATHER,
+        KEY_SLOT_2:  SLOT_BATTERY,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    72,
+        KEY_MOCK_STEPS: 6543,
+        'graph': [55] * 36,
+    },
+    21: {
+        'name': 'd_slots_weather_hr_cgm',
+        KEY_GLUCOSE_VALUE:  110,
+        KEY_GLUCOSE_TREND:  TREND_FLAT,
+        KEY_GLUCOSE_DELTA:  2,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   15,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_WEATHER,
+        KEY_SLOT_1:  SLOT_HEART_RATE,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    72,
+        KEY_MOCK_STEPS: 6543,
+        'graph': [55] * 36,
+    },
+    22: {
+        'name': 'd_slots_battery_steps_cgm',
+        KEY_GLUCOSE_VALUE:  110,
+        KEY_GLUCOSE_TREND:  TREND_FLAT,
+        KEY_GLUCOSE_DELTA:  2,
+        KEY_LAST_READ_SEC:  None,
+        KEY_USE_MMOL:       0,
+        KEY_HIGH_THRESHOLD: 180,
+        KEY_LOW_THRESHOLD:  70,
+        KEY_URGENT_HIGH:    250,
+        KEY_URGENT_LOW:     55,
+        KEY_WEATHER_TEMP:   22,
+        KEY_WEATHER_ICON:   ICON_CLEAR,
+        KEY_WEATHER_TMIN:   15,
+        KEY_WEATHER_TMAX:   28,
+        KEY_LAYOUT:  LAYOUT_DASHBOARD,
+        KEY_SLOT_0:  SLOT_BATTERY,
+        KEY_SLOT_1:  SLOT_STEPS,
+        KEY_SLOT_2:  SLOT_CGM,
+        KEY_SLOT_3:  SLOT_NONE,
+        KEY_MOCK_HR:    72,
+        KEY_MOCK_STEPS: 6543,
+        'graph': [55] * 36,
+    },
 }
 
 
@@ -269,8 +604,9 @@ def main():
     parser = argparse.ArgumentParser(description='Inject mock AppMessage into Pebble emulator')
     parser.add_argument('--emulator', required=True, choices=['emery', 'gabbro'],
                         help='Emulator name (emery=T2, gabbro=R2)')
-    parser.add_argument('--state', required=True, type=int, choices=[1, 2, 3, 4, 5],
-                        help='State number 1-5')
+    parser.add_argument('--state', required=True, type=int,
+                        choices=sorted(STATES.keys()),
+                        help='State number (1-5 simple, 11-22 dashboard — see module docstring)')
     args = parser.parse_args()
     send_state(args.emulator, args.state)
 

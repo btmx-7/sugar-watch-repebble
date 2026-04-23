@@ -209,7 +209,15 @@ Figma references (cyan dark mode, `font-semantic.json`, `color-primitives.json`,
 - [ ] 8.0.2 Add `fonts/Inter_18pt-Bold.ttf` to `resources/fonts/`
   (required by DATE_14)
 - [ ] 8.0.3 Add `TIME_DIGITS_80` resource: Inter Black 80pt, chars `[0-9:]`
-  (Simple watchface time, `font-semantic/time/simple`)
+  (Simple watchface time, `font-semantic/time/simple`).
+  **BLOCKED:** at 80pt, Inter Black's `.notdef` glyph rasterizes to 301px,
+  over Pebble SDK's 256px per-glyph limit. Codepoint 9647 (U+25AF WHITE
+  VERTICAL RECTANGLE) triggers the limit. Pebble always generates `.notdef`
+  regardless of `characterRegex`, so the regex cannot filter it out.
+  Resolution options: (a) subset the TTF to remove/shrink `.notdef` glyph;
+  (b) use Inter Black at 72pt instead (scales to ~271px — may still exceed);
+  (c) use a lighter Inter weight (Bold/SemiBold) which has a smaller `.notdef`.
+  Track as Batch 3.
 - [ ] 8.0.4 Add `TIME_DIGITS_56` resource: Inter Black 56pt, chars `[0-9:]`
   (Dashboard watchface time, `font-semantic/time/dashboard`)
 - [ ] 8.0.5 Add `DATA_MEDIUM_12` resource: Inter SemiBold 12pt, full set

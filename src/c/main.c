@@ -20,6 +20,7 @@
 #define CLR_ICON_DEFAULT   ((GColor){.argb = 0xDF})  // #55FFFF icon/default
 #define CLR_ICON_SUBTLE    ((GColor){.argb = 0xCA})  // #00AAAA icon/subtle
 #define CLR_BORDER_SUBTLE  ((GColor){.argb = 0xC5})  // #005555 surface/border/subtle
+#define CLR_SURFACE_BG_SUBTLE ((GColor){.argb = 0xC5})  // #005555 surface/background/subtle (same hex as border/subtle)
 #define CLR_STATE_DANGER   ((GColor){.argb = 0xF0})  // #FF0000 state/danger
 #define CLR_STATE_WARNING  ((GColor){.argb = 0xF8})  // #FFAA00 state/warning
 #define CLR_STATE_POSITIVE ((GColor){.argb = 0xCE})  // #00FFAA state/positive
@@ -226,9 +227,17 @@ static uint32_t s_step_count   = 0;
 
 // Alert state
 static AppTimer *s_alert_timer    = NULL;
+static bool      s_alert_active   = false;  // true when zone is URGENT_LOW or URGENT_HIGH
 
 // ─── UI Fonts ────────────────────────────────────────────────────────────────
-static GFont s_time_font;           // Inter Black 64px (RESOURCE_ID_TIME_DIGITS_64)
+// Simple uses 64pt Inter Black (TIME_DIGITS_64).
+// Dashboard uses 56pt Inter Black (TIME_DIGITS_56) per font-semantic/time/dashboard.
+// NOTE: font-semantic/time/simple (80pt) is blocked — at 80pt Inter Black's
+// .notdef glyph exceeds Pebble's 256px per-glyph limit (301px). Options for
+// Batch 3: (1) subset the TTF to remove oversized .notdef, (2) use a lighter
+// Inter weight at 80pt, or (3) cap Simple at 72pt.
+static GFont s_time_font;           // Inter Black 64px (RESOURCE_ID_TIME_DIGITS_64) — Simple
+static GFont s_time_font_dash;      // Inter Black 56px (RESOURCE_ID_TIME_DIGITS_56) — Dashboard
 static GFont s_symbol_font;         // Material Symbols Filled 16px (RESOURCE_ID_MATERIAL_SYMBOLS_16)
 static GFont s_symbol_font_regular; // Material Symbols Regular 16px (RESOURCE_ID_MATERIAL_SYMBOLS_REGULAR_16)
 static GFont s_value_font;          // Inter Black 20px (RESOURCE_ID_DATA_VALUE_20)
@@ -252,15 +261,21 @@ static TextLayer *s_simple_month_layer;
 static TextLayer *s_simple_bt_layer;
 static TextLayer *s_simple_music_layer;
 
-// Dashboard layout specific
-static TextLayer *s_dash_time_layer;
+// Dashboard layout specific — 5-layer time (H1, H2, colon, M1, M2).
+// Per-layer colors: H1+H2 = CLR_TEXT_SUBTLE · colon = CLR_TEXT_INVERTED ·
+// M1+M2 = CLR_TEXT_DEFAULT. Digits overlap per Figma; colon stays separated.
+static TextLayer *s_dash_h1_layer;
+static TextLayer *s_dash_h2_layer;
+static TextLayer *s_dash_colon_layer;
+static TextLayer *s_dash_m1_layer;
+static TextLayer *s_dash_m2_layer;
 static TextLayer *s_dash_day_layer;
 static TextLayer *s_dash_month_layer;
 static TextLayer *s_dash_bt_layer;
 static TextLayer *s_dash_trend_layer;      // trend icon (Material Symbol)
 static TextLayer *s_dash_glucose_layer;    // glucose value
 static TextLayer *s_dash_unit_layer;       // unit label
-static TextLayer *s_dash_trend_name_layer; // R2 only: trend name text ("Flat", "Rising", …)
+static TextLayer *s_dash_trend_name_layer; // trend name text ("Flat", "Rising", …)
 
 // ─── Helpers: Zone ───────────────────────────────────────────────────────────
 
@@ -278,7 +293,7 @@ static GColor zone_color(GlucoseZone zone) {
     case ZONE_URGENT_LOW:  return CLR_STATE_DANGER;
     case ZONE_LOW:         return CLR_STATE_WARNING;
     case ZONE_IN_RANGE:    return CLR_ICON_DEFAULT;
-    case ZONE_HIGH:        return GColorChromeYellow;
+    case ZONE_HIGH:        return CLR_STATE_WARNING;
     case ZONE_URGENT_HIGH: return CLR_STATE_DANGER;
     default:               return CLR_STATE_INACTIVE;
   }
@@ -322,14 +337,16 @@ static const char* trend_icon(GlucoseTrend t) {
 }
 
 static const char* trend_name(GlucoseTrend t) {
+  // 7-label scheme, one-to-one with trend_icon() arrows.
+  // Figma: font-semantic/data/medium (Inter SemiBold 12pt).
   switch (t) {
-    case TREND_DOUBLE_UP:       return "Rise++";
-    case TREND_SINGLE_UP:       return "Rising";
-    case TREND_FORTY_FIVE_UP:   return "Rising";
+    case TREND_DOUBLE_UP:       return "Rapid rise";
+    case TREND_SINGLE_UP:       return "Rise";
+    case TREND_FORTY_FIVE_UP:   return "Slow rise";
     case TREND_FLAT:            return "Flat";
-    case TREND_FORTY_FIVE_DOWN: return "Falling";
-    case TREND_SINGLE_DOWN:     return "Falling";
-    case TREND_DOUBLE_DOWN:     return "Fall++";
+    case TREND_FORTY_FIVE_DOWN: return "Slow fall";
+    case TREND_SINGLE_DOWN:     return "Fall";
+    case TREND_DOUBLE_DOWN:     return "Rapid fall";
     default:                    return "--";
   }
 }
@@ -366,36 +383,68 @@ static void graph_layer_update_proc(Layer *layer, GContext *ctx) {
 
   GFont lbl = fonts_get_system_font(FONT_KEY_GOTHIC_14);
 
+  // ── Target band: fill the in-range zone (between hypo and hyper) with
+  //    surface/background/subtle (#005555). Drawn first so threshold lines
+  //    and the plot line render on top. Band is clipped to the visible range.
+  {
+    int band_hi = (s_settings.high_thresh > max_val) ? max_val : s_settings.high_thresh;
+    int band_lo = (s_settings.low_thresh  < min_val) ? min_val : s_settings.low_thresh;
+    if (band_hi > band_lo) {
+      int y_top = VAL_TO_Y(band_hi);  // higher glucose = smaller y = top edge
+      int y_bot = VAL_TO_Y(band_lo);  // lower glucose  = larger y = bottom edge
+      if (y_bot > y_top) {
+        graphics_context_set_fill_color(ctx, CLR_SURFACE_BG_SUBTLE);
+        graphics_fill_rect(ctx, GRect(0, y_top, w, y_bot - y_top), 0, GCornerNone);
+      }
+    }
+  }
+
+  // Threshold bands (3px each): 1 warning border + 1 surface fill + 1 warning border.
+  // Per Figma spec. The band is centered on the threshold y. Border color is
+  // CLR_STATE_WARNING (#FFAA00, matches the zone entered when crossing).
+  // Fill color is CLR_SURFACE_BG_SUBTLE (#005555, same as in-range target band
+  // so the threshold visually integrates with the in-range zone).
+  // Labels use CLR_STATE_WARNING to match the border semantically.
+  #define DRAW_THRESH_BAND(y) do { \
+    graphics_context_set_fill_color(ctx, CLR_STATE_WARNING); \
+    graphics_fill_rect(ctx, GRect(0, (y) - 1, w, 1), 0, GCornerNone); \
+    graphics_fill_rect(ctx, GRect(0, (y) + 1, w, 1), 0, GCornerNone); \
+    graphics_context_set_fill_color(ctx, CLR_SURFACE_BG_SUBTLE); \
+    graphics_fill_rect(ctx, GRect(0, (y),     w, 1), 0, GCornerNone); \
+  } while (0)
+
   if (s_settings.low_thresh >= min_val && s_settings.low_thresh <= max_val) {
     int ly = VAL_TO_Y(s_settings.low_thresh);
-    graphics_context_set_stroke_color(ctx, GColorOrange);
-    graphics_context_set_stroke_width(ctx, 1);
-    for (int x = 0; x < w; x += 4) { graphics_draw_pixel(ctx, GPoint(x, ly)); graphics_draw_pixel(ctx, GPoint(x+1, ly)); }
-    if (ly + 14 <= h) {
+    if (ly - 1 >= 0 && ly + 1 <= h - 1) DRAW_THRESH_BAND(ly);
+    // Label: prefer below the band; fall back above when clipped at bottom.
+    int l_y = (ly + 15 <= h) ? (ly + 2) : (ly - 14);
+    if (l_y >= 0 && l_y + 13 <= h) {
       char l_buf[8];
       snprintf(l_buf, sizeof(l_buf), "%d", (int)s_settings.low_thresh);
-      graphics_context_set_text_color(ctx, GColorLightGray);
-      graphics_draw_text(ctx, "hypo", lbl, GRect(1, ly + 1, w / 2, 13),
+      graphics_context_set_text_color(ctx, CLR_STATE_WARNING);
+      graphics_draw_text(ctx, "hypo", lbl, GRect(1, l_y, w / 2, 13),
         GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-      graphics_draw_text(ctx, l_buf, lbl, GRect(w / 2, ly + 1, w / 2, 13),
+      graphics_draw_text(ctx, l_buf, lbl, GRect(w / 2, l_y, w / 2, 13),
         GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
     }
   }
 
   if (s_settings.high_thresh >= min_val && s_settings.high_thresh <= max_val) {
     int hy = VAL_TO_Y(s_settings.high_thresh);
-    graphics_context_set_stroke_color(ctx, GColorChromeYellow);
-    for (int x = 0; x < w; x += 4) { graphics_draw_pixel(ctx, GPoint(x, hy)); graphics_draw_pixel(ctx, GPoint(x+1, hy)); }
-    if (hy >= 13) {
+    if (hy - 1 >= 0 && hy + 1 <= h - 1) DRAW_THRESH_BAND(hy);
+    // Label: prefer above the band; fall back below when clipped at top.
+    int h_y = (hy >= 14) ? (hy - 14) : (hy + 2);
+    if (h_y >= 0 && h_y + 13 <= h) {
       char h_buf[8];
       snprintf(h_buf, sizeof(h_buf), "%d", (int)s_settings.high_thresh);
-      graphics_context_set_text_color(ctx, GColorLightGray);
-      graphics_draw_text(ctx, "hyper", lbl, GRect(1, hy - 13, w / 2, 13),
+      graphics_context_set_text_color(ctx, CLR_STATE_WARNING);
+      graphics_draw_text(ctx, "hyper", lbl, GRect(1, h_y, w / 2, 13),
         GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
-      graphics_draw_text(ctx, h_buf, lbl, GRect(w / 2, hy - 13, w / 2, 13),
+      graphics_draw_text(ctx, h_buf, lbl, GRect(w / 2, h_y, w / 2, 13),
         GTextOverflowModeTrailingEllipsis, GTextAlignmentRight, NULL);
     }
   }
+  #undef DRAW_THRESH_BAND
 
   int x_step = (w - 4) / (GRAPH_POINTS - 1);
   if (x_step < 1) x_step = 1;
@@ -417,12 +466,18 @@ static void graph_layer_update_proc(Layer *layer, GContext *ctx) {
     }
     prev_pt = pt;
 
+    // BUG-06: dot-trail — draw a filled circle at every data point.
+    // Terminal reading gets a larger dot (r=4) with white outline to highlight
+    // the current value; historical points get a small dot (r=2).
     if (i == s_graph_count - 1) {
       graphics_context_set_fill_color(ctx, seg_color);
       graphics_fill_circle(ctx, pt, 4);
       graphics_context_set_stroke_color(ctx, GColorWhite);
       graphics_context_set_stroke_width(ctx, 1);
       graphics_draw_circle(ctx, pt, 4);
+    } else {
+      graphics_context_set_fill_color(ctx, seg_color);
+      graphics_fill_circle(ctx, pt, 2);
     }
   }
   #undef VAL_TO_Y
@@ -461,6 +516,25 @@ static void digit_stroke_update_proc(Layer *layer, GContext *ctx) {
 
 static void prv_populate_slot_data(SlotRenderData *d, SlotType type) {
   d->type = type;
+
+  // BUG-05: urgent alert overlay — suppress all secondary slots so the alert
+  // state draws attention. CGM slot is exempt (it's the source of truth).
+  if (s_alert_active && type != SLOT_CGM && type != SLOT_NONE) {
+    d->value_normalized = 0;
+    snprintf(d->value_str, sizeof(d->value_str), "--");
+    d->unit_str[0] = '\0';
+    d->icon_color  = CLR_STATE_DISABLED;
+    d->icon_filled = false;
+    // Keep icon glyph for recognisability; derive it cheaply by type.
+    switch (type) {
+      case SLOT_BATTERY:    d->icon_glyph = ICON_BATTERY_ANDROID_0; break;
+      case SLOT_WEATHER:    d->icon_glyph = ICON_WEATHER_SUNNY;     break;
+      case SLOT_HEART_RATE: d->icon_glyph = ICON_HEART_RATE;        break;
+      case SLOT_STEPS:      d->icon_glyph = ICON_STEPS;             break;
+      default:              d->icon_glyph = NULL;                   break;
+    }
+    return;
+  }
 
   switch (type) {
     case SLOT_BATTERY: {
@@ -705,10 +779,11 @@ static void slot_update_proc(Layer *layer, GContext *ctx) {
 
   // Unit — Inter Black 10px centered at y=36. Full slot width so strings
   // like "mg/dL" fit on one row; horizontal center alignment handles layout.
+  // Height extended to 14px so the 'g' descender isn't clipped (BUG-03 fix).
   if (d->unit_str[0]) {
     GFont ufont = s_unit_font ? s_unit_font
                               : fonts_get_system_font(FONT_KEY_GOTHIC_14);
-    GRect unit_rect = GRect(0, 36, w, 10);
+    GRect unit_rect = GRect(0, 36, w, 14);
     graphics_context_set_text_color(ctx, GColorBlack);
     for (int i = 0; i < 8; i++) {
       GRect r = GRect(unit_rect.origin.x + offs1[i].x,
@@ -791,11 +866,23 @@ static void update_display_dashboard(void) {
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
 
-  // Single-row time "HH:MM"
+  // Time "HH:MM" split across 5 TextLayers so each digit can carry its own
+  // color per Figma (H1/H2 subtle, colon inverted, M1/M2 default) and the
+  // hour+minute pairs can overlap independently of the colon.
   static char s_time_buf[8];
   strftime(s_time_buf, sizeof(s_time_buf),
     clock_is_24h_style() ? "%H:%M" : "%I:%M", t);
-  if (s_dash_time_layer) text_layer_set_text(s_dash_time_layer, s_time_buf);
+  static char s_h1_buf[2] = {0}, s_h2_buf[2] = {0};
+  static char s_m1_buf[2] = {0}, s_m2_buf[2] = {0};
+  s_h1_buf[0] = s_time_buf[0]; s_h1_buf[1] = 0;
+  s_h2_buf[0] = s_time_buf[1]; s_h2_buf[1] = 0;
+  s_m1_buf[0] = s_time_buf[3]; s_m1_buf[1] = 0;
+  s_m2_buf[0] = s_time_buf[4]; s_m2_buf[1] = 0;
+  if (s_dash_h1_layer)    text_layer_set_text(s_dash_h1_layer,    s_h1_buf);
+  if (s_dash_h2_layer)    text_layer_set_text(s_dash_h2_layer,    s_h2_buf);
+  if (s_dash_colon_layer) text_layer_set_text(s_dash_colon_layer, ":");
+  if (s_dash_m1_layer)    text_layer_set_text(s_dash_m1_layer,    s_m1_buf);
+  if (s_dash_m2_layer)    text_layer_set_text(s_dash_m2_layer,    s_m2_buf);
 
   // Day / month
   static char s_dd_buf[4], s_mm_buf[4];
@@ -818,10 +905,15 @@ static void update_display_dashboard(void) {
   // CGM panel
   GlucoseZone zone = get_zone(s_glucose);
   bool stale = data_is_stale();
-  GColor cgm_color = stale ? GColorLightGray : zone_color(zone);
+  GColor cgm_color = stale ? CLR_STATE_INACTIVE : zone_color(zone);
+
+  // BUG-05: set global alert flag so secondary slots suppress their values.
+  s_alert_active = !stale && (zone == ZONE_URGENT_LOW || zone == ZONE_URGENT_HIGH);
 
   if (s_dash_trend_layer) {
-    const char *t_icon = trend_icon((GlucoseTrend)s_trend);
+    // BUG-05: in urgent alert, show ICON_ERROR instead of trend arrow to
+    // make the critical state unmistakable.
+    const char *t_icon = s_alert_active ? ICON_ERROR : trend_icon((GlucoseTrend)s_trend);
     text_layer_set_text(s_dash_trend_layer, t_icon ? t_icon : "");
     text_layer_set_text_color(s_dash_trend_layer, cgm_color);
   }
@@ -843,8 +935,13 @@ static void update_display_dashboard(void) {
     bool inactive = stale || s_glucose == 0;
     text_layer_set_text(s_dash_trend_name_layer,
       inactive ? "--" : trend_name((GlucoseTrend)s_trend));
-    text_layer_set_text_color(s_dash_trend_name_layer,
-      inactive ? CLR_STATE_INACTIVE : cgm_color);
+    // Trend name is supporting context: stay subtle in-range, promote to
+    // state color only when alerting. Matches Figma text/subtle + state/*.
+    GColor tn_color;
+    if (inactive)                    tn_color = CLR_STATE_INACTIVE;
+    else if (zone == ZONE_IN_RANGE)  tn_color = CLR_TEXT_SUBTLE;
+    else                             tn_color = cgm_color;
+    text_layer_set_text_color(s_dash_trend_name_layer, tn_color);
   }
 }
 
@@ -1053,14 +1150,18 @@ void prv_layout_for_bounds(GRect bounds) {
   if (s_simple_bt_layer)    layer_set_hidden(text_layer_get_layer(s_simple_bt_layer),    !show_simple);
   if (s_simple_music_layer) layer_set_hidden(text_layer_get_layer(s_simple_music_layer), true);  // always hidden
 
-  if (s_dash_time_layer)    layer_set_hidden(text_layer_get_layer(s_dash_time_layer),    !show_dashboard);
+  if (s_dash_h1_layer)      layer_set_hidden(text_layer_get_layer(s_dash_h1_layer),      !show_dashboard);
+  if (s_dash_h2_layer)      layer_set_hidden(text_layer_get_layer(s_dash_h2_layer),      !show_dashboard);
+  if (s_dash_colon_layer)   layer_set_hidden(text_layer_get_layer(s_dash_colon_layer),   !show_dashboard);
+  if (s_dash_m1_layer)      layer_set_hidden(text_layer_get_layer(s_dash_m1_layer),      !show_dashboard);
+  if (s_dash_m2_layer)      layer_set_hidden(text_layer_get_layer(s_dash_m2_layer),      !show_dashboard);
   if (s_dash_day_layer)     layer_set_hidden(text_layer_get_layer(s_dash_day_layer),     !show_dashboard);
   if (s_dash_month_layer)   layer_set_hidden(text_layer_get_layer(s_dash_month_layer),   !show_dashboard);
   if (s_dash_bt_layer)      layer_set_hidden(text_layer_get_layer(s_dash_bt_layer),      !show_dashboard);
   if (s_dash_trend_layer)      layer_set_hidden(text_layer_get_layer(s_dash_trend_layer),      !show_dashboard);
   if (s_dash_glucose_layer)    layer_set_hidden(text_layer_get_layer(s_dash_glucose_layer),    !show_dashboard);
   if (s_dash_unit_layer)       layer_set_hidden(text_layer_get_layer(s_dash_unit_layer),       !show_dashboard);
-  // trend_name: R2 Dashboard only — T2 and Simple branches will re-hide if needed
+  // trend_name: visible in Dashboard (both T2 and R2), hidden in Simple.
   if (s_dash_trend_name_layer) layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), !show_dashboard);
 
   // Graph: visible in Dashboard (non-compact), hidden in Simple and compact Dashboard
@@ -1192,10 +1293,12 @@ void prv_layout_for_bounds(GRect bounds) {
       // T2: 200x228
 
       // Top 3 slots
+      // BUG-01/02: slot 0 shifted right to x=8 (was 4), slot 2 shifted left to
+      // x=136 (was 140) — gives 8px edge clearance, symmetric 8px gaps.
       GRect slot_frames[3] = {
-        GRect(4,   4, 56, 56),   // Left
+        GRect(8,   4, 56, 56),   // Left
         GRect(72,  4, 56, 56),   // Center
-        GRect(140, 4, 56, 56)    // Right
+        GRect(136, 4, 56, 56)    // Right
       };
       for (int i = 0; i < 3; i++) {
         if (s_slot_layer[i]) {
@@ -1206,10 +1309,30 @@ void prv_layout_for_bounds(GRect bounds) {
       if (s_slot_layer[3]) layer_set_hidden(s_slot_layer[3], true);
 
       // Time row (between top slots and CGM panel)
-      // Top slots bottom: y=60; CGM panel top: y=168
-      // Center time in 60..168: midpoint=114, LECO_38 height ~44px → y=92
-      if (s_dash_time_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_time_layer), GRect(24, 76, 144, 44));
+      // Top slots bottom: y=60; CGM panel top: y=130 (Dashboard zone).
+      // 5-layer time: H1 H2 : M1 M2 (digits overlap, colon stays separated).
+      // Inter Black 56pt glyph box ≈ 36×56. Each hour/minute pair overlaps by 4px.
+      // Layout centered horizontally around x=100: total group ≈ 140px wide.
+      //   H1: x=30..66 (right-anchored, overlaps right edge with H2)
+      //   H2: x=62..98 (left-anchored, -4 overlap with H1)
+      //   colon: x=98..114 (16px wide, no overlap)
+      //   M1: x=114..150 (left-anchored, overlaps right edge with M2 at -4)
+      //   M2: x=146..182 (left-anchored)
+      // Batch 3: validate per-digit offsets against Figma node 40-20566.
+      // BUG-04: digit layers widened to 42px (was 36) so Inter Black 56pt "0"
+      // (~42px advance) isn't clipped by center-alignment. Colon 24px.
+      // Group 184px centered at x=100: H1(8..50) H2(46..88) :(88..112) M1(112..154) M2(150..192).
+      // -4px overlap between H1/H2 and M1/M2 per Figma trackingAdjust spec.
+      if (s_dash_h1_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_h1_layer), GRect(8, 72, 42, 56));
+      if (s_dash_h2_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_h2_layer), GRect(46, 72, 42, 56));
+      if (s_dash_colon_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_colon_layer), GRect(88, 72, 24, 56));
+      if (s_dash_m1_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_m1_layer), GRect(112, 72, 42, 56));
+      if (s_dash_m2_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_m2_layer), GRect(150, 72, 42, 56));
       if (s_dash_bt_layer)
         layer_set_frame(text_layer_get_layer(s_dash_bt_layer), GRect(4, 80, 16, 16));
       if (s_dash_day_layer)
@@ -1217,30 +1340,47 @@ void prv_layout_for_bounds(GRect bounds) {
       if (s_dash_month_layer)
         layer_set_frame(text_layer_get_layer(s_dash_month_layer), GRect(176, 94, 20, 14));
 
-      // CGM panel: y=130..224
-      // Graph: 120px wide
+      // CGM panel: y=130..228 — 3-row sidebar (arrow · glucose · unit)
+      // BUG-09: trend name hidden on T2 (design shows only arrow + value + unit).
+      // Remaining rows shifted up to use the freed space.
       if (s_graph_layer)
         layer_set_frame(s_graph_layer, GRect(4, 130, 120, 80));
-      // Trend icon
-      if (s_dash_trend_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(128, 130, 68, 20));
-      // Glucose value
-      if (s_dash_glucose_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(128, 152, 68, 30));
-      // Unit
-      if (s_dash_unit_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(128, 182, 68, 14));
-      // Trend name: T2 uses right sidebar only — keep hidden
       if (s_dash_trend_name_layer)
         layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), true);
+      // Trend icon (row 1)
+      if (s_dash_trend_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(128, 134, 68, 20));
+      // Glucose value (row 2)
+      if (s_dash_glucose_layer) {
+        layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(128, 156, 68, 36));
+        text_layer_set_text_alignment(s_dash_glucose_layer, GTextAlignmentRight);
+      }
+      // Unit (row 3)
+      if (s_dash_unit_layer) {
+        layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(128, 194, 68, 14));
+        text_layer_set_text_alignment(s_dash_unit_layer, GTextAlignmentRight);
+      }
 
     } else {
-      // R2: 260x260
-
+      // R2: 260×260 canvas, clipped to inscribed circle (center 130,130, r=130).
+      // Slot row is staggered to respect the circular boundary:
+      //   - Center slot (1) at y=14: x∈[102,158], top edge y=14 has chord half-width
+      //     sqrt(130² - 116²) ≈ 58, so x∈[72,188] is inside — fully contained.
+      //   - Corner slots (0, 2) at y=34: top-outer corner (20,34)/(76,34) sits
+      //     just inside the arc. At y=34, chord half-width ≈ sqrt(130² - 96²) ≈ 87,
+      //     so x∈[43,217] is inside. The outer corner of each slot (x=20 or x=240)
+      //     clips by the arc but the icon + content anchor is inset, so visible area
+      //     is preserved. y=34 is the lowest the stagger goes without eating into
+      //     the time row below.
+      //   - Slot 3 hidden on R2 (Dashboard uses 3 slots max on round).
+      // BUG-01/02: slots 0 and 2 moved inward so their arc track stays within
+      // the circular display boundary. At y=34 the chord starts at x≈43; slot 0
+      // at x=42 keeps content inside. Slot 2 symmetric at x=162.
+      // Gap between slot 0 right edge (98) and slot 1 left (102) = 4px. OK.
       GRect slot_frames[3] = {
-        GRect(20,  20, 56, 56),
+        GRect(42,  34, 56, 56),
         GRect(102, 14, 56, 56),
-        GRect(184, 20, 56, 56)
+        GRect(162, 34, 56, 56)
       };
       for (int i = 0; i < 3; i++) {
         if (s_slot_layer[i]) {
@@ -1250,33 +1390,53 @@ void prv_layout_for_bounds(GRect bounds) {
       }
       if (s_slot_layer[3]) layer_set_hidden(s_slot_layer[3], true);
 
-      if (s_dash_time_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_time_layer), GRect(50, 90, 160, 44));
+      // BUG-04: digit layers widened to 42px; group re-centered at x=130.
+      //   H1(38..80) H2(76..118) :(118..142) M1(142..184) M2(180..222), center=130.
+      // -4px overlap between H1/H2 and M1/M2.
+      // BUG-07: day/month placed right of M2 (ends at 222). x=224 stays inside
+      //   the circle at those y values (chord x_max≈253 at y=88).
+      if (s_dash_h1_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_h1_layer), GRect(38, 86, 42, 56));
+      if (s_dash_h2_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_h2_layer), GRect(76, 86, 42, 56));
+      if (s_dash_colon_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_colon_layer), GRect(118, 86, 24, 56));
+      if (s_dash_m1_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_m1_layer), GRect(142, 86, 42, 56));
+      if (s_dash_m2_layer)
+        layer_set_frame(text_layer_get_layer(s_dash_m2_layer), GRect(180, 86, 42, 56));
       if (s_dash_bt_layer)
         layer_set_frame(text_layer_get_layer(s_dash_bt_layer), GRect(10, 94, 16, 16));
       if (s_dash_day_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_day_layer), GRect(234, 88, 20, 14));
+        layer_set_frame(text_layer_get_layer(s_dash_day_layer), GRect(224, 88, 22, 14));
       if (s_dash_month_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_month_layer), GRect(234, 108, 20, 14));
+        layer_set_frame(text_layer_get_layer(s_dash_month_layer), GRect(224, 108, 22, 14));
 
       // Graph: height reduced 76→60 to make room for below-graph CGM panel
       if (s_graph_layer)
         layer_set_frame(s_graph_layer, GRect(30, 148, 150, 60));
 
+      // Row 1 (y=210): [trend name]  [mg/dL] centered as a pair around x=130.
+      // Name right-aligns to x=126; unit left-aligns from x=130. 4px gap at center.
       if (s_dash_trend_name_layer) {
         layer_set_frame(text_layer_get_layer(s_dash_trend_name_layer),
-          GRect(42, 212, 96, 14));
+          GRect(40, 210, 86, 14));
+        text_layer_set_text_alignment(s_dash_trend_name_layer, GTextAlignmentRight);
         layer_set_hidden(text_layer_get_layer(s_dash_trend_name_layer), false);
       }
-      if (s_dash_unit_layer)
-        layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(142, 212, 76, 14));
-      // x=82..180 at y=246 fits within R2 inscribed circle (x_min≈77, x_max≈183)
+      if (s_dash_unit_layer) {
+        layer_set_frame(text_layer_get_layer(s_dash_unit_layer), GRect(130, 210, 64, 14));
+        text_layer_set_text_alignment(s_dash_unit_layer, GTextAlignmentLeft);
+      }
+
+      // Row 2 (y=222): arrow + glucose as centered pair. Height 30 fits GOTHIC_24_BOLD.
+      // Circular clip at y=252 allows x∈[85,175]; arrow at x≈94, glucose ends ≤x=172.
       if (s_dash_trend_layer) {
-        layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(82, 226, 24, 20));
+        layer_set_frame(text_layer_get_layer(s_dash_trend_layer), GRect(82, 226, 24, 22));
         text_layer_set_text_alignment(s_dash_trend_layer, GTextAlignmentCenter);
       }
       if (s_dash_glucose_layer) {
-        layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(110, 226, 70, 20));
+        layer_set_frame(text_layer_get_layer(s_dash_glucose_layer), GRect(108, 220, 64, 30));
         text_layer_set_text_alignment(s_dash_glucose_layer, GTextAlignmentLeft);
       }
     }
@@ -1309,6 +1469,7 @@ static void main_window_load(Window *window) {
 
   // Load custom fonts
   s_time_font           = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_TIME_DIGITS_64));
+  s_time_font_dash      = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_TIME_DIGITS_56));
   s_symbol_font         = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_16));
   s_symbol_font_regular = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_MATERIAL_SYMBOLS_REGULAR_16));
   s_value_font          = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_DATA_VALUE_20));
@@ -1386,14 +1547,51 @@ static void main_window_load(Window *window) {
   text_layer_set_text_alignment(s_simple_month_layer, GTextAlignmentLeft);
   layer_add_child(s_window_layer, text_layer_get_layer(s_simple_month_layer));
 
-  // ── Dashboard: time row ──
-  s_dash_time_layer = text_layer_create(GRect(24, 76, 144, 44));
-  text_layer_set_background_color(s_dash_time_layer, GColorClear);
-  text_layer_set_text_color(s_dash_time_layer, GColorWhite);
-  text_layer_set_font(s_dash_time_layer, fonts_get_system_font(FONT_KEY_LECO_36_BOLD_NUMBERS));
-  text_layer_set_text_alignment(s_dash_time_layer, GTextAlignmentCenter);
-  text_layer_set_text(s_dash_time_layer, "00:00");
-  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_time_layer));
+  // ── Dashboard: time row (5 layers — H1, H2, colon, M1, M2) ──
+  // Per Figma font-semantic/time/dashboard: Inter Black 56pt.
+  // Per-digit colors per Figma: H1+H2 = CLR_TEXT_SUBTLE (#AAFFFF),
+  // colon = CLR_TEXT_INVERTED (#FFFFFF), M1+M2 = CLR_TEXT_DEFAULT (#00FFFF).
+  // Frames are set per platform in update_layout_for_platform().
+  // Digits may overlap slightly (trackingAdjust -2) per Figma spec.
+  s_dash_h1_layer = text_layer_create(GRect(0, 0, 42, 56));
+  text_layer_set_background_color(s_dash_h1_layer, GColorClear);
+  text_layer_set_text_color(s_dash_h1_layer, CLR_TEXT_SUBTLE);
+  if (s_time_font_dash) text_layer_set_font(s_dash_h1_layer, s_time_font_dash);
+  text_layer_set_text_alignment(s_dash_h1_layer, GTextAlignmentCenter);
+  text_layer_set_text(s_dash_h1_layer, "0");
+  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_h1_layer));
+
+  s_dash_h2_layer = text_layer_create(GRect(0, 0, 42, 56));
+  text_layer_set_background_color(s_dash_h2_layer, GColorClear);
+  text_layer_set_text_color(s_dash_h2_layer, CLR_TEXT_SUBTLE);
+  if (s_time_font_dash) text_layer_set_font(s_dash_h2_layer, s_time_font_dash);
+  text_layer_set_text_alignment(s_dash_h2_layer, GTextAlignmentCenter);
+  text_layer_set_text(s_dash_h2_layer, "0");
+  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_h2_layer));
+
+  s_dash_colon_layer = text_layer_create(GRect(0, 0, 24, 56));  // BUG-04: 24px wide (was 16) to fit Inter Black 56pt colon glyph
+  text_layer_set_background_color(s_dash_colon_layer, GColorClear);
+  text_layer_set_text_color(s_dash_colon_layer, CLR_TEXT_INVERTED);
+  if (s_time_font_dash) text_layer_set_font(s_dash_colon_layer, s_time_font_dash);
+  text_layer_set_text_alignment(s_dash_colon_layer, GTextAlignmentCenter);
+  text_layer_set_text(s_dash_colon_layer, ":");
+  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_colon_layer));
+
+  s_dash_m1_layer = text_layer_create(GRect(0, 0, 42, 56));
+  text_layer_set_background_color(s_dash_m1_layer, GColorClear);
+  text_layer_set_text_color(s_dash_m1_layer, CLR_TEXT_DEFAULT);
+  if (s_time_font_dash) text_layer_set_font(s_dash_m1_layer, s_time_font_dash);
+  text_layer_set_text_alignment(s_dash_m1_layer, GTextAlignmentCenter);
+  text_layer_set_text(s_dash_m1_layer, "0");
+  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_m1_layer));
+
+  s_dash_m2_layer = text_layer_create(GRect(0, 0, 42, 56));
+  text_layer_set_background_color(s_dash_m2_layer, GColorClear);
+  text_layer_set_text_color(s_dash_m2_layer, CLR_TEXT_DEFAULT);
+  if (s_time_font_dash) text_layer_set_font(s_dash_m2_layer, s_time_font_dash);
+  text_layer_set_text_alignment(s_dash_m2_layer, GTextAlignmentCenter);
+  text_layer_set_text(s_dash_m2_layer, "0");
+  layer_add_child(s_window_layer, text_layer_get_layer(s_dash_m2_layer));
 
   s_dash_bt_layer = text_layer_create(GRect(4, 80, 16, 16));
   text_layer_set_background_color(s_dash_bt_layer, GColorClear);
@@ -1417,24 +1615,33 @@ static void main_window_load(Window *window) {
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_month_layer));
 
   // ── Dashboard: CGM panel ──
+  // Trend icon — init color is CLR_STATE_INACTIVE (#AAAAAA) before first data;
+  // update_display_dashboard overrides with cgm_color based on zone.
   s_dash_trend_layer = text_layer_create(GRect(128, 130, 68, 20));
   text_layer_set_background_color(s_dash_trend_layer, GColorClear);
-  text_layer_set_text_color(s_dash_trend_layer, GColorLightGray);
+  text_layer_set_text_color(s_dash_trend_layer, CLR_STATE_INACTIVE);
   if (s_symbol_font) text_layer_set_font(s_dash_trend_layer, s_symbol_font);
   text_layer_set_text_alignment(s_dash_trend_layer, GTextAlignmentRight);
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_trend_layer));
 
+  // Glucose value — default (no-data) color is CLR_TEXT_DEFAULT (#00FFFF text/default).
+  // At runtime, update_display_dashboard overrides this to cgm_color based on zone
+  // (urgent low/high = danger red; low = warning amber; in range = cyan; stale = grey).
+  // Font: Inter Black 20pt (DATA_VALUE_20 = s_value_font) per font-semantic/data/large.
   s_dash_glucose_layer = text_layer_create(GRect(128, 152, 68, 30));
   text_layer_set_background_color(s_dash_glucose_layer, GColorClear);
-  text_layer_set_text_color(s_dash_glucose_layer, GColorMintGreen);
-  text_layer_set_font(s_dash_glucose_layer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  text_layer_set_text_color(s_dash_glucose_layer, CLR_TEXT_DEFAULT);
+  if (s_value_font) text_layer_set_font(s_dash_glucose_layer, s_value_font);
   text_layer_set_text_alignment(s_dash_glucose_layer, GTextAlignmentRight);
   text_layer_set_text(s_dash_glucose_layer, "--");
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_glucose_layer));
 
+  // Unit label: supporting text below glucose value. Color per Figma = text/subtle (#AAFFFF).
+  // Font still system GOTHIC_14; migrate to Inter SemiBold 8pt (font-semantic/data/small)
+  // once Inter SemiBold TTF is dropped in resources/fonts/ (Batch 3).
   s_dash_unit_layer = text_layer_create(GRect(128, 182, 68, 14));
   text_layer_set_background_color(s_dash_unit_layer, GColorClear);
-  text_layer_set_text_color(s_dash_unit_layer, GColorMediumAquamarine);
+  text_layer_set_text_color(s_dash_unit_layer, CLR_TEXT_SUBTLE);
   text_layer_set_font(s_dash_unit_layer, fonts_get_system_font(FONT_KEY_GOTHIC_14));
   text_layer_set_text_alignment(s_dash_unit_layer, GTextAlignmentRight);
   layer_add_child(s_window_layer, text_layer_get_layer(s_dash_unit_layer));
@@ -1486,7 +1693,11 @@ static void main_window_unload(Window *window) {
   if (s_simple_month_layer) { text_layer_destroy(s_simple_month_layer); s_simple_month_layer = NULL; }
 
   // Dashboard layers
-  if (s_dash_time_layer)    { text_layer_destroy(s_dash_time_layer);    s_dash_time_layer    = NULL; }
+  if (s_dash_h1_layer)    { text_layer_destroy(s_dash_h1_layer);    s_dash_h1_layer    = NULL; }
+  if (s_dash_h2_layer)    { text_layer_destroy(s_dash_h2_layer);    s_dash_h2_layer    = NULL; }
+  if (s_dash_colon_layer) { text_layer_destroy(s_dash_colon_layer); s_dash_colon_layer = NULL; }
+  if (s_dash_m1_layer)    { text_layer_destroy(s_dash_m1_layer);    s_dash_m1_layer    = NULL; }
+  if (s_dash_m2_layer)    { text_layer_destroy(s_dash_m2_layer);    s_dash_m2_layer    = NULL; }
   if (s_dash_bt_layer)      { text_layer_destroy(s_dash_bt_layer);      s_dash_bt_layer      = NULL; }
   if (s_dash_day_layer)     { text_layer_destroy(s_dash_day_layer);     s_dash_day_layer     = NULL; }
   if (s_dash_month_layer)   { text_layer_destroy(s_dash_month_layer);   s_dash_month_layer   = NULL; }
@@ -1499,7 +1710,8 @@ static void main_window_unload(Window *window) {
   if (s_graph_layer) { layer_destroy(s_graph_layer); s_graph_layer = NULL; }
 
   // Custom fonts
-  if (s_time_font)   { fonts_unload_custom_font(s_time_font);   s_time_font   = NULL; }
+  if (s_time_font)      { fonts_unload_custom_font(s_time_font);      s_time_font      = NULL; }
+  if (s_time_font_dash) { fonts_unload_custom_font(s_time_font_dash); s_time_font_dash = NULL; }
   if (s_symbol_font)         { fonts_unload_custom_font(s_symbol_font);         s_symbol_font         = NULL; }
   if (s_symbol_font_regular) { fonts_unload_custom_font(s_symbol_font_regular); s_symbol_font_regular = NULL; }
   if (s_value_font)  { fonts_unload_custom_font(s_value_font);  s_value_font  = NULL; }
