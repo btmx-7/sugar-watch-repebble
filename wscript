@@ -8,6 +8,9 @@ def options(ctx):
     ctx.load('pebble_sdk')
 
 def configure(ctx):
+    import os
+    os.environ.setdefault('CC', 'clang')
+    os.environ.setdefault('CXX', 'clang++')
     ctx.load('pebble_sdk')
 
 def build(ctx):
