@@ -8,6 +8,20 @@ def options(ctx):
     ctx.load('pebble_sdk')
 
 def configure(ctx):
+    # On macOS, Xcode ships only Clang. Map CC/CXX to clang so waf can find
+    # a working compiler without requiring manual env-var prefixes.
+    import sys, subprocess
+    if sys.platform == 'darwin':
+        def _missing(cmd):
+            try:
+                subprocess.check_output(['which', cmd], stderr=subprocess.STDOUT)
+                return False
+            except subprocess.CalledProcessError:
+                return True
+        if _missing('gcc'):
+            os.environ.setdefault('CC', '/usr/bin/clang')
+        if _missing('g++'):
+            os.environ.setdefault('CXX', '/usr/bin/clang++')
     ctx.load('pebble_sdk')
 
 def build(ctx):

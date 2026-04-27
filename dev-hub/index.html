@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Steady Dev Hub</title>
+<style>
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+:root {
+  /* Surfaces */
+  --bg:         #0a0a0a;
+  --s0:         #101010;
+  --s1:         #161616;
+  --s2:         #1e1e1e;
+  --s3:         #272727;
+  --s4:         #303030;
+  --border:     #242424;
+  --border-sub: #181818;
+
+  /* Brand */
+  --accent:   #00ffaa;
+  --accent-d: rgba(0,255,170,.10);
+  --accent-r: rgba(0,255,170,.28);
+  --blue:     #3d9eff;
+  --blue-d:   rgba(61,158,255,.10);
+
+  /* Text */
+  --t1: #e2e2e2;
+  --t2: #888;
+  --t3: #555;
+  --t4: #333;
+
+  /* Semantic state */
+  --ok:       #00ffaa;
+  --warn:     #ffaa00;
+  --danger:   #ff4d4d;
+  --ok-d:     rgba(0,255,170,.10);
+  --warn-d:   rgba(255,170,0,.10);
+  --danger-d: rgba(255,77,77,.10);
+
+  /* ── Typography scale (rem anchored to html:16px) ──────────────────────
+     --fs-label : 11px  — uppercase section labels, decorative metadata
+     --fs-mono  : 13px  — monospace code, terminal output
+     --fs-sm    : 13px  — secondary UI text
+     --fs-base  : 14px  — base interactive minimum (buttons, inputs, selects)
+     --fs-lg    : 16px  — emphasis
+  ── */
+  --fs-label: 0.6875rem;
+  --fs-mono:  0.8125rem;
+  --fs-sm:    0.8125rem;
+  --fs-base:  0.875rem;
+  --fs-lg:    1rem;
+
+  /* ── Component heights ──────────────────────────────────────────────────
+     --h-ctrl     : 32px — universal min height for all interactive elements
+     --h-header   : 44px
+     --h-panel    : 38px
+     --h-term-bar : 34px
+  ── */
+  --h-ctrl:     2rem;
+  --h-header:   2.75rem;
+  --h-panel:    2.375rem;
+  --h-term-bar: 2.125rem;
+
+  /* Font stacks */
+  --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Fira Mono', 'Consolas', monospace;
+
+  /* Terminal semantic colors (ANSI-like — intentionally outside brand palette) */
+  --term-cmd:    #60aaff;
+  --term-stdout: #c0c0c0;
+  --term-stderr: #ff8080;
+  --term-env:    #ff9966;
+
+  /* Border radius */
+  --r:    0.375rem;   /* 6px  */
+  --r-sm: 0.25rem;    /* 4px  */
+  --r-xs: 0.1875rem;  /* 3px  */
+
+  /* Panel widths — px correct here: layout constraint, not text-relative */
+  --panel-l-w: 280px;
+  --panel-r-w: 360px;
+}
+
+/* ── Reset ──────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+html, body { height: 100%; font-family: var(--font); background: var(--bg); color: var(--t1); font-size: var(--fs-base); line-height: 1.5; -webkit-font-smoothing: antialiased; overflow: hidden; }
+button { font-family: var(--font); cursor: pointer; }
+select, input { font-family: var(--font); }
+
+/* ── App shell ──────────────────────────────────────────────────────────── */
+.app {
+  display: grid;
+  grid-template-rows: var(--h-header) 1fr;
+  height: 100vh;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--s0);
+  z-index: 10;
+}
+
+.header-side { display: flex; align-items: center; gap: 0.5rem; }
+.header-side.right { justify-content: flex-end; }
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  pointer-events: none;
+}
+
+.logo-icon {
+  width: 26px; height: 26px;
+  background: var(--accent-d);
+  border: 1px solid var(--accent-r);
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.logo-text { display: flex; align-items: baseline; gap: 0.375rem; }
+.logo-name { font-size: var(--fs-sm); font-weight: 700; color: var(--t1); letter-spacing: .01em; }
+.logo-sub  { font-size: var(--fs-label); color: var(--t3); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; }
+
+/* Panel toggle buttons in header */
+.panel-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4375rem;
+  padding: 0 0.625rem;
+  min-height: var(--h-ctrl);
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: all .15s;
+}
+.panel-toggle:hover { background: var(--s2); color: var(--t1); border-color: var(--border); }
+.panel-toggle.open  { background: var(--s2); color: var(--t1); border-color: var(--border); }
+.panel-toggle svg   { width: 14px; height: 14px; }
+
+.hdot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--t4);
+  flex-shrink: 0;
+  transition: background .3s;
+}
+.hdot.ok   { background: var(--ok);   box-shadow: 0 0 5px var(--ok); }
+.hdot.warn { background: var(--warn); box-shadow: 0 0 5px var(--warn); }
+.hdot.err  { background: var(--danger); }
+
+/* ── Main layout ────────────────────────────────────────────────────────── */
+.main {
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Panels (collapsible) ───────────────────────────────────────────────── */
+.panel-wrap {
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: width .22s ease;
+}
+.panel-wrap.left  { width: 0; border-right: 0 solid var(--border); }
+.panel-wrap.right { width: 0; border-left:  0 solid var(--border); }
+.panel-wrap.left.open  { width: var(--panel-l-w); border-right-width: 1px; }
+.panel-wrap.right.open { width: var(--panel-r-w); border-left-width:  1px; }
+
+.panel {
+  height: 100%;
+  overflow-y: auto;
+  background: var(--s0);
+  display: flex;
+  flex-direction: column;
+}
+.panel-left  { width: var(--panel-l-w); }
+.panel-right { width: var(--panel-r-w); }
+
+.panel-header {
+  height: var(--h-panel);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.875rem;
+  border-bottom: 1px solid var(--border-sub);
+}
+.panel-title { font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: .09em; color: var(--t3); }
+
+.panel-close {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--t3);
+  width: var(--h-ctrl);
+  height: var(--h-ctrl);
+  border-radius: var(--r-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all .1s;
+}
+.panel-close:hover { color: var(--t1); background: var(--s2); border-color: var(--border); }
+
+.panel-body { flex: 1; overflow-y: auto; padding: 0.75rem; }
+
+/* ── Panel sections ─────────────────────────────────────────────────────── */
+.psec { margin-bottom: 1rem; }
+.psec:last-child { margin-bottom: 0; }
+.psec-label {
+  font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--t3); margin-bottom: 0.5rem;
+}
+.psec-sub { font-size: var(--fs-label); color: var(--t3); margin-bottom: 0.375rem; }
+.pdivider { height: 1px; background: var(--border-sub); margin: 0.875rem 0; }
+
+/* ── Form controls (panel) ──────────────────────────────────────────────── */
+select {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--t1);
+  font-size: var(--fs-base);
+  min-height: var(--h-ctrl);
+  padding: 0 1.75rem 0 0.5625rem;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .15s;
+}
+select:hover{
+  border-color: var(--t3);
+}
+select:focus { border-color: var(--accent); }
+
+input[type="number"] {
+  width: 100%;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  color: var(--t1);
+  font-size: var(--fs-base);
+  min-height: var(--h-ctrl);
+  padding: 0 0.5625rem;
+  outline: none;
+  transition: border-color .15s;
+}
+input[type="number"]:focus { border-color: var(--accent); }
+
+/* Toggle switch */
+.sw-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.625rem;
+  min-height: var(--h-ctrl);
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  user-select: none;
+}
+.sw-label { font-size: var(--fs-base); font-weight: 500; color: var(--t1); }
+.sw-desc  { font-size: var(--fs-label); color: var(--t3); margin-top: 1px; }
+
+.sw {
+  position: relative;
+  width: 34px; height: 20px;
+  flex-shrink: 0;
+}
+.sw input { opacity: 0; width: 0; height: 0; position: absolute; }
+.sw-track {
+  position: absolute; inset: 0;
+  background: var(--s4);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  transition: all .2s;
+}
+.sw-track::after {
+  content: '';
+  position: absolute;
+  left: 2px; top: 2px;
+  width: 14px; height: 14px;
+  background: var(--t3);
+  border-radius: 50%;
+  transition: all .2s;
+}
+.sw input:checked + .sw-track { background: var(--accent-d); border-color: var(--accent-r); }
+.sw input:checked + .sw-track::after { transform: translateX(14px); background: var(--accent); }
+
+/* Slot rows */
+.slot-row {
+  display: grid;
+  grid-template-columns: 3.25rem 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+}
+.slot-row:last-child { margin-bottom: 0; }
+.slot-id { font-size: var(--fs-label); font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: .05em; }
+
+/* Threshold rows */
+.thresh-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.375rem;
+  margin-bottom: 0.375rem;
+}
+.thresh-row:last-child { margin-bottom: 0; }
+.thresh-item { display: flex; flex-direction: column; gap: 0.25rem; }
+.thresh-label { font-size: var(--fs-label); font-weight: 600; letter-spacing: .05em; }
+.thresh-urgent { color: var(--danger); }
+.thresh-warn   { color: var(--warn); }
+
+/* Segmented in panel */
+.seg {
+  display: flex;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0.125rem;
+  gap: 0.125rem;
+  min-height: var(--h-ctrl);
+}
+.seg:hover{
+  border-color: var(--t3);
+}
+.seg-btn {
+  flex: 1;
+  padding: 0.25rem 0.375rem;
+  border-radius: var(--r-xs);
+  border: none;
+  background: transparent;
+  color: var(--t2);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  transition: all .1s;
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: center;
+}
+.seg-btn:hover { color: var(--t1); }
+.seg-btn.active { 
+  background: var(--s0); 
+  color: var(--t1); 
+  box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+
+/* Demo state mini preview in panel */
+.demo-mini {
+  padding: 0.5rem 0.625rem;
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  margin-top: 0.375rem;
+}
+.demo-mini-val { font-family: var(--mono); font-size: 1.25rem; font-weight: 800; line-height: 1; }
+.demo-mini-meta { font-size: var(--fs-label); color: var(--t3); margin-top: 0.25rem; }
+
+/* ── Center column ───────────────────────────────────────────────────────── */
+.center {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.75rem 1.5rem 2rem;
+  gap: 1.25rem;
+  background: var(--bg);
+}
+
+/* ── Block 1: Watch Preview ─────────────────────────────────────────────── */
+.block-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.875rem;
+  position: relative;
+}
+
+.watch-zoom-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+}
+
+/* The watch frame itself — size set by JS */
+.watch-frame {
+  background: #000;
+  position: relative;
+  flex-shrink: 0;
+  /* zoom property set by JS for 1x / 1.5x */
+}
+
+.watch-content {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* Preview controls below watch */
+.preview-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.preview-controls select {
+  width: auto;
+}
+.preview-controls .seg { flex-shrink: 0; }
+
+/* ── Watchface renderer ─────────────────────────────────────────────────── */
+.wf { width: 100%; height: 100%; position: relative; background: #000; font-family: var(--mono); }
+
+/* Simple layout */
+.wf-slot {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  line-height: 1.2;
+}
+.wf-slot.tl { top: 0; left: 0; }
+.wf-slot.tr { top: 0; right: 0; align-items: flex-end; }
+.wf-slot.bl { bottom: 0; left: 0; }
+.wf-slot.br { bottom: 0; right: 0; align-items: flex-end; }
+
+.wf-slot-val  { font-weight: 700; color: #55ffff; }
+.wf-slot-unit { color: #aaffff; }
+
+.wf-time-simple {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #00ffff;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* Dashboard layout */
+.wf-top-row {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.wf-top-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #55ffff;
+  line-height: 1.2;
+}
+.wf-top-slot:last-child { align-items: flex-end; }
+.wf-top-slot:first-child { align-items: flex-start; }
+
+.wf-time-dash {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  color: #00ffff;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.wf-cgm-panel {
+  position: absolute;
+  left: 0; right: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1;
+}
+
+.wf-graph-area {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  background: #050f0a;
+  border-top: 1px solid #0a2a18;
+  overflow: hidden;
+}
+
+.wf-trend { font-weight: 700; }
+
+/* Zone colors */
+.z-urgent  { color: #ff4d4d; }
+.z-warning { color: #ffaa00; }
+.z-ok      { color: #00ffaa; }
+.z-neutral { color: #888; }
+.z-unknown { color: #333; }
+
+/* ── Block 2: Config + Actions ───────────────────────────────────────────── */
+.block-actions {
+  width: 100%;
+  max-width: 560px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 0.875rem 1rem;
+}
+
+.cmd-display {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0.5rem 0.75rem;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  color: var(--t1);
+  line-height: 1.6;
+  margin-bottom: 0.75rem;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+.cmd-env { color: var(--term-env); }
+.cmd-key { color: var(--ok); }
+.cmd-arg { color: var(--blue); }
+.cmd-num { color: var(--warn); }
+
+.btn-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 0.75rem; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem;
+  padding: 0 0.875rem;
+  min-height: var(--h-ctrl);
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  font-size: var(--fs-base); font-weight: 500;
+  cursor: pointer; transition: all .1s;
+  user-select: none; white-space: nowrap;
+}
+.btn svg { width: 0.75rem; height: 0.75rem; flex-shrink: 0; }
+.btn:disabled { opacity: .35; pointer-events: none; }
+
+.btn-primary   { background: var(--accent); color: var(--bg); font-weight: 700; border-color: var(--accent); }
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-secondary { background: var(--s3); color: var(--t1); border-color: var(--border); }
+.btn-secondary:hover { background: var(--s4); border-color: var(--s4); }
+.btn-ghost     { background: transparent; color: var(--t2); border-color: transparent; }
+.btn-ghost:hover { background: var(--s2); color: var(--t1); border-color: var(--border); }
+.btn-danger    { background: var(--danger-d); color: var(--danger); border-color: rgba(255,77,77,.25); }
+.btn-danger:hover { background: rgba(255,77,77,.2); }
+/* Modifier: smaller text, same min-height */
+.btn-sm { padding: 0 0.625rem; font-size: var(--fs-sm); }
+.btn-xs { padding: 0 0.5rem;   font-size: var(--fs-sm); }
+/* Square icon-only button: width = height = min-height */
+.btn-icon { padding: 0; width: var(--h-ctrl); }
+
+/* Status dots row */
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding-top: 0.625rem;
+  border-top: 1px solid var(--border-sub);
+}
+
+.status-item { display: flex; align-items: center; gap: 0.375rem; }
+.dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--t4);
+  flex-shrink: 0;
+  transition: background .3s;
+}
+.dot.ok   { background: var(--ok);   box-shadow: 0 0 5px var(--ok); }
+.dot.warn { background: var(--warn); box-shadow: 0 0 4px var(--warn); }
+.dot.err  { background: var(--danger); }
+.dot-label { font-size: var(--fs-sm); color: var(--t2); }
+
+/* ── Block 3: Terminal ───────────────────────────────────────────────────── */
+.block-terminal {
+  width: 100%;
+  max-width: 560px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  max-height: 280px;
+}
+
+.term-bar {
+  height: var(--h-term-bar); flex-shrink: 0;
+  display: flex; align-items: center;
+  padding: 0 0.75rem; gap: 0.5rem;
+  border-bottom: 1px solid var(--border-sub);
+  background: var(--s0);
+}
+.term-title { font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--t3); flex: 1; }
+.build-ind { display: flex; align-items: center; gap: 0.375rem; font-size: var(--fs-sm); font-weight: 500; }
+.build-ind.idle    { color: var(--t4); }
+.build-ind.running { color: var(--warn); }
+.build-ind.ok      { color: var(--ok); }
+.build-ind.err     { color: var(--danger); }
+.spinner { width: 9px; height: 9px; border: 1.5px solid transparent; border-top-color: currentColor; border-radius: 50%; animation: spin .65s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.term-out {
+  flex: 1; overflow-y: auto;
+  padding: 0.5rem 0.75rem 0.625rem;
+  font-family: var(--mono);
+  font-size: var(--fs-mono);
+  line-height: 1.65;
+  color: var(--t2);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.t-cmd     { color: var(--term-cmd); font-weight: 600; display: block; }
+.t-stdout  { color: var(--term-stdout); }
+.t-stderr  { color: var(--term-stderr); }
+.t-info    { color: var(--ok); }
+.t-success { color: var(--ok); font-weight: 700; display: block; }
+.t-error   { color: var(--danger); font-weight: 700; display: block; }
+
+/* ── Cheat sheet (right panel) ──────────────────────────────────────────── */
+.cs-section { margin-bottom: 1.25rem; }
+.cs-title {
+  font-size: var(--fs-label); font-weight: 700; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--t3); margin-bottom: 0.5rem;
+  display: flex; align-items: center; gap: 0.5rem;
+}
+.cs-title::after { content: ''; flex: 1; height: 1px; background: var(--border-sub); }
+.cs-list { display: flex; flex-direction: column; gap: 0.25rem; }
+
+.cs-cmd {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  display: flex; align-items: stretch; overflow: hidden;
+}
+.cs-code {
+  flex: 1; padding: 0.4375rem 0.625rem;
+  font-family: var(--mono); font-size: var(--fs-mono);
+  color: var(--t1); line-height: 1.55;
+}
+.cs-right {
+  padding: 0.375rem 0.5rem;
+  border-left: 1px solid var(--border);
+  display: flex; align-items: center; gap: 0.375rem; flex-shrink: 0;
+}
+.cs-desc { font-size: var(--fs-sm); color: var(--t3); max-width: 8rem; }
+/* .copy-btn is supplemental — always used alongside .btn .btn-ghost .btn-icon */
+.copy-btn.copied { color: var(--ok); }
+
+/* Syntax colors */
+.ce { color: var(--term-env); }
+.ck { color: var(--ok); }
+.ca { color: var(--blue); }
+.cc { color: var(--t4); }
+.cn { color: var(--warn); }
+
+/* ── Misc ────────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--s3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--s4); }
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ══ Header ══════════════════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-side left">
+    <button class="panel-toggle" id="btn-left" onclick="App.togglePanel('left')">
+      <svg viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="2" width="12" height="1.5" rx=".75"/><rect x="1" y="6.25" width="8" height="1.5" rx=".75"/><rect x="1" y="10.5" width="12" height="1.5" rx=".75"/></svg>
+      Workspace
+    </button>
+    <div class="hdot" id="dot-server-hdr" title="Server status"></div>
+  </div>
+
+  <div class="header-center">
+    <div class="logo-icon">
+      <svg viewBox="0 0 16 16" fill="none" width="15" height="15">
+        <rect x="3" y="1" width="10" height="14" rx="2" stroke="#00ffaa" stroke-width="1.4"/>
+        <line x1="5.5" y1="5.5" x2="10.5" y2="5.5" stroke="#00ffaa" stroke-width="1.2"/>
+        <line x1="5.5" y1="8"   x2="8.5"  y2="8"   stroke="#00ffaa" stroke-width="1.2"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <span class="logo-name">Steady</span>
+      <span class="logo-sub">dev hub</span>
+    </div>
+  </div>
+
+  <div class="header-side right">
+    <button class="panel-toggle" id="btn-right" onclick="App.togglePanel('right')">
+      Cheat Sheet
+      <svg viewBox="0 0 14 14" fill="currentColor"><path d="M2 2a1 1 0 011-1h8a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V2zm2 1v8h6V3H4zm1 1.5h4v1H5v-1zm0 2h4v1H5v-1zm0 2h2.5v1H5v-1z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- ══ Main ════════════════════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- ── Left panel: Workspace ─────────────────────────────────────────── -->
+  <div class="panel-wrap left" id="wrap-left">
+    <div class="panel panel-left">
+      <div class="panel-header">
+        <span class="panel-title">Workspace</span>
+        <button class="btn btn-ghost btn-icon panel-close" onclick="App.closePanel('left')" title="Close">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="panel-body">
+
+        <!-- Build mode -->
+        <div class="psec">
+          <div class="psec-label">Build Mode</div>
+          <label class="sw-row" for="chk-demo">
+            <div>
+              <div class="sw-label">Demo Mode</div>
+              <div class="sw-desc">Injects fake CGM data</div>
+            </div>
+            <div class="sw">
+              <input type="checkbox" id="chk-demo" onchange="App.onDemoToggle(this.checked)">
+              <div class="sw-track"></div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Target device -->
+        <div class="psec">
+          <div class="psec-label">Target Device</div>
+          <select id="sel-platform" onchange="App.onPlatformChange(this.value)">
+            <option value="emery">Emery — Pebble Time 2</option>
+            <option value="gabbro">Gabbro — Pebble Round 2</option>
+            <option value="basalt">Basalt — Pebble Time</option>
+            <option value="diorite">Diorite — Pebble 2</option>
+            <option value="chalk">Chalk — Pebble Time Round</option>
+          </select>
+        </div>
+
+        <!-- Demo state (visible when demo mode) -->
+        <div class="psec" id="psec-demo" style="display:none">
+          <div class="psec-label">Demo State</div>
+          <select id="sel-demo-state" onchange="App.onDemoStateChange(parseInt(this.value))"></select>
+          <div class="demo-mini" id="demo-mini"></div>
+        </div>
+
+        <div class="pdivider"></div>
+
+        <!-- Layout -->
+        <div class="psec">
+          <div class="psec-label">Layout</div>
+          <div class="seg" id="seg-layout">
+            <button class="seg-btn" data-val="0" onclick="App.onLayoutChange(0)">Simple</button>
+            <button class="seg-btn" data-val="1" onclick="App.onLayoutChange(1)">Dashboard</button>
+          </div>
+        </div>
+
+        <!-- Slots -->
+        <div class="psec">
+          <div class="psec-label">Slots</div>
+          <div id="slots-container"></div>
+        </div>
+
+        <div class="pdivider"></div>
+
+        <!-- CGM options -->
+        <div class="psec">
+          <div class="psec-label">Glucose Units</div>
+          <div class="seg" id="seg-units">
+            <button class="seg-btn" data-val="mgdl"  onclick="App.onUnitsChange('mgdl')">mg/dL</button>
+            <button class="seg-btn" data-val="mmol"  onclick="App.onUnitsChange('mmol')">mmol/L</button>
+          </div>
+        </div>
+
+        <div class="psec">
+          <div class="psec-label">Graph Window</div>
+          <div class="seg" id="seg-graph">
+            <button class="seg-btn" data-val="13" onclick="App.onGraphChange(13)">1 h</button>
+            <button class="seg-btn" data-val="25" onclick="App.onGraphChange(25)">2 h</button>
+            <button class="seg-btn" data-val="37" onclick="App.onGraphChange(37)">3 h</button>
+          </div>
+        </div>
+
+        <div class="psec">
+          <div class="psec-label">Thresholds</div>
+          <div class="thresh-row">
+            <div class="thresh-item">
+              <div class="thresh-label thresh-urgent">Urgent Low</div>
+              <input type="number" id="t-urgentLow" min="20" max="100" onchange="App.onThreshChange('urgentLow', this.value)">
+            </div>
+            <div class="thresh-item">
+              <div class="thresh-label thresh-warn">Low</div>
+              <input type="number" id="t-low" min="40" max="120" onchange="App.onThreshChange('low', this.value)">
+            </div>
+          </div>
+          <div class="thresh-row">
+            <div class="thresh-item">
+              <div class="thresh-label thresh-warn">High</div>
+              <input type="number" id="t-high" min="120" max="300" onchange="App.onThreshChange('high', this.value)">
+            </div>
+            <div class="thresh-item">
+              <div class="thresh-label thresh-urgent">Urgent High</div>
+              <input type="number" id="t-urgentHigh" min="150" max="400" onchange="App.onThreshChange('urgentHigh', this.value)">
+            </div>
+          </div>
+        </div>
+
+      </div><!-- panel-body -->
+    </div>
+  </div>
+
+  <!-- ── Center ─────────────────────────────────────────────────────────── -->
+  <div class="center" id="center">
+
+    <!-- Block 1: Watch preview -->
+    <div class="block-preview">
+      <div class="watch-zoom-wrap" id="watch-zoom-wrap">
+        <div class="watch-frame" id="watch-frame">
+          <div class="watch-content" id="watch-content"></div>
+        </div>
+      </div>
+
+      <!-- Layout + device switches below watch -->
+      <div class="preview-controls">
+        <div class="seg" id="seg-layout-center">
+          <button class="seg-btn" data-val="0" onclick="App.onLayoutChange(0)">Simple</button>
+          <button class="seg-btn" data-val="1" onclick="App.onLayoutChange(1)">Dashboard</button>
+        </div>
+        <select id="sel-platform-center" onchange="App.onPlatformChange(this.value)" style="width:auto"></select>
+        <button class="btn btn-ghost btn-icon" id="expand-btn" onclick="App.toggleZoom()" title="Toggle zoom">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="currentColor" id="expand-icon">
+            <path d="M1 4V1h3M7 1h3v3M1 7v3h3M7 10h3V7"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Block 2: Config + Actions -->
+    <div class="block-actions">
+      <div class="cmd-display" id="cmd-display"></div>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btn-bi" onclick="App.doBuildInstall()">
+          <svg viewBox="0 0 12 12" fill="currentColor"><path d="M1 2a1 1 0 011-1h5l4 4v5a1 1 0 01-1 1H2a1 1 0 01-1-1V2z"/></svg>
+          Build + Install
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btn-b" onclick="App.doBuild()">Build</button>
+        <button class="btn btn-secondary btn-sm" id="btn-i" onclick="App.doInstall()">Install</button>
+        <button class="btn btn-danger btn-sm" id="btn-kill" onclick="App.doKill()" style="display:none">
+          <svg viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"><path d="M2 2l8 8M10 2l-8 8"/></svg>
+          Kill
+        </button>
+      </div>
+
+      <div class="status-row">
+        <div class="status-item">
+          <div class="dot" id="dot-server"></div>
+          <span class="dot-label">Server</span>
+        </div>
+        <div class="status-item">
+          <div class="dot" id="dot-build"></div>
+          <span class="dot-label">Build</span>
+        </div>
+        <div class="status-item">
+          <div class="dot" id="dot-emulator"></div>
+          <span class="dot-label">Emulator</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Block 3: Terminal -->
+    <div class="block-terminal">
+      <div class="term-bar">
+        <span class="term-title">Output</span>
+        <div class="build-ind idle" id="build-ind">
+          <span id="build-ind-text">Idle</span>
+        </div>
+        <button class="btn btn-ghost btn-xs" onclick="App.clearTerminal()">Clear</button>
+        <button class="btn btn-danger btn-xs" id="btn-kill-bar" onclick="App.doKill()" style="display:none">Kill</button>
+      </div>
+      <div class="term-out" id="term-out"></div>
+    </div>
+
+  </div><!-- center -->
+
+  <!-- ── Right panel: Cheat Sheet ──────────────────────────────────────── -->
+  <div class="panel-wrap right" id="wrap-right">
+    <div class="panel panel-right">
+      <div class="panel-header">
+        <span class="panel-title">Cheat Sheet</span>
+        <button class="btn btn-ghost btn-icon panel-close" onclick="App.closePanel('right')" title="Close">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+      <div class="panel-body" id="cheatsheet-body"></div>
+    </div>
+  </div>
+
+</div><!-- main -->
+</div><!-- app -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   App
+═══════════════════════════════════════════════════════════════════════════ */
+const App = {
+
+  config: null,
+  building: false,
+  connected: false,
+  zoomed: false,
+  sse: null,
+  sseRetries: 0,
+  lastBuilt: null,
+  lastInstalled: null,
+
+  // ── Static ───────────────────────────────────────────────────────────────
+
+  DEVICES: {
+    emery:   { w: 200, h: 228, shape: 'rect',   r: 14, name: 'Emery (Time 2)',   short: 'Time 2' },
+    gabbro:  { w: 260, h: 260, shape: 'circle', r: 0,  name: 'Gabbro (Round 2)',short: 'Round 2' },
+    basalt:  { w: 144, h: 168, shape: 'rect',   r: 10, name: 'Basalt',           short: 'Time' },
+    diorite: { w: 144, h: 168, shape: 'rect',   r: 10, name: 'Diorite',          short: 'Pebble 2' },
+    chalk:   { w: 180, h: 180, shape: 'circle', r: 0,  name: 'Chalk',            short: 'Time Round' },
+  },
+
+  SLOT_TYPES: [
+    { id:0, label:'None',       abbr:'—',   color:'#333' },
+    { id:1, label:'Battery',    abbr:'BAT', color:'#55ffff' },
+    { id:2, label:'Weather',    abbr:'WTH', color:'#55ffff' },
+    { id:3, label:'Heart Rate', abbr:'HR',  color:'#55ffff' },
+    { id:4, label:'Steps',      abbr:'STP', color:'#55ffff' },
+    { id:5, label:'CGM',        abbr:'CGM', color:'#00ffaa' },
+  ],
+
+  DEMO_STATES: [
+    { id:0, name:'urgent_low',  glucose:45,  trend:6, delta:-15, age:60,   temp:10,   hr:88,  steps:1234,  layout:0, slots:[2,1,5,3], zone:'urgent',  label:'Urgent Low' },
+    { id:1, name:'low',         glucose:65,  trend:5, delta:-8,  age:120,  temp:10,   hr:72,  steps:3201,  layout:0, slots:[2,1,5,3], zone:'warning', label:'Low' },
+    { id:2, name:'in_range',    glucose:120, trend:3, delta:2,   age:180,  temp:10,   hr:128, steps:6842,  layout:0, slots:[2,1,5,3], zone:'ok',      label:'In Range' },
+    { id:3, name:'high',        glucose:195, trend:1, delta:10,  age:120,  temp:22,   hr:95,  steps:8500,  layout:0, slots:[2,1,5,3], zone:'warning', label:'High' },
+    { id:4, name:'urgent_high', glucose:270, trend:0, delta:18,  age:60,   temp:22,   hr:110, steps:12034, layout:0, slots:[2,1,5,3], zone:'urgent',  label:'Urgent High' },
+    { id:5, name:'stale',       glucose:120, trend:7, delta:0,   age:1800, temp:10,   hr:0,   steps:0,     layout:0, slots:[2,1,5,3], zone:'neutral', label:'Stale' },
+    { id:6, name:'dashboard',   glucose:142, trend:3, delta:3,   age:180,  temp:12,   hr:78,  steps:6842,  layout:1, slots:[2,1,5,0], zone:'ok',      label:'Dashboard' },
+    { id:7, name:'zero_state',  glucose:0,   trend:7, delta:0,   age:0,    temp:null, hr:0,   steps:0,     layout:0, slots:[0,0,0,0], zone:'unknown', label:'No Data' },
+  ],
+
+  TRENDS: ['↑↑','↑','↗','→','↘','↓','↓↓','—'],
+
+  ZONE_CLS: { urgent:'z-urgent', warning:'z-warning', ok:'z-ok', neutral:'z-neutral', unknown:'z-unknown' },
+
+  // ── Init ─────────────────────────────────────────────────────────────────
+
+  async init() {
+    this.buildSlots();
+    this.buildDemoStateSelect();
+    this.buildCenterDeviceSelect();
+    this.buildCheatSheet();
+    await this.loadConfig();
+    this.connectSSE();
+    this.updateStatusDots();
+  },
+
+  // ── API ───────────────────────────────────────────────────────────────────
+
+  async apiGet(url)       { const r = await fetch(url);          return r.json(); },
+  async apiPost(url, body){ const r = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body||{}) }); return r.json(); },
+
+  // ── Config ────────────────────────────────────────────────────────────────
+
+  async loadConfig() {
+    try {
+      this.config = await this.apiGet('/api/config');
+      const ping  = await this.apiGet('/api/ping');
+      this.lastBuilt     = ping.lastBuilt;
+      this.lastInstalled = ping.lastInstalled;
+    } catch {
+      this.config = { platform:'emery', demoMode:false, demoState:2, layout:0, slots:[2,1,5,3], units:'mgdl', thresholds:{urgentLow:55,low:70,high:180,urgentHigh:250}, graphWindow:25 };
+    }
+    this.applyToUI();
+  },
+
+  async saveConfig(patch) {
+    Object.assign(this.config, patch);
+    this.renderWatchPreview();
+    this.updateCmdDisplay();
+    this.updateStatusDots();
+    try { await this.apiPost('/api/config', this.config); } catch {}
+  },
+
+  applyToUI() {
+    const c = this.config;
+    // Demo toggle
+    const chk = document.getElementById('chk-demo');
+    if (chk) chk.checked = c.demoMode;
+    this.toggleDemoPanel(c.demoMode);
+
+    // Platform selects
+    ['sel-platform','sel-platform-center'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = c.platform;
+    });
+
+    // Demo state select
+    const sd = document.getElementById('sel-demo-state');
+    if (sd) sd.value = String(c.demoState);
+    this.renderDemoMini(c.demoState);
+
+    // Layout segs
+    this.setSegActive('seg-layout', String(c.layout));
+    this.setSegActive('seg-layout-center', String(c.layout));
+
+    // Units / graph
+    this.setSegActive('seg-units', c.units);
+    this.setSegActive('seg-graph', String(c.graphWindow));
+
+    // Slots
+    [0,1,2,3].forEach(i => {
+      const s = document.getElementById(`slot-${i}`);
+      if (s) s.value = String(c.slots[i]);
+    });
+
+    // Thresholds
+    const t = c.thresholds;
+    ['urgentLow','low','high','urgentHigh'].forEach(k => {
+      const el = document.getElementById(`t-${k}`);
+      if (el) el.value = t[k];
+    });
+
+    this.renderWatchPreview();
+    this.updateCmdDisplay();
+    this.updateStatusDots();
+  },
+
+  setSegActive(id, val) {
+    const seg = document.getElementById(id);
+    if (!seg) return;
+    seg.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('active', b.dataset.val === val));
+  },
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+
+  onDemoToggle(val) {
+    this.saveConfig({ demoMode: val });
+    this.toggleDemoPanel(val);
+  },
+
+  toggleDemoPanel(show) {
+    const el = document.getElementById('psec-demo');
+    if (el) el.style.display = show ? 'block' : 'none';
+  },
+
+  onPlatformChange(val) {
+    ['sel-platform','sel-platform-center'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    });
+    this.saveConfig({ platform: val });
+  },
+
+  onDemoStateChange(id) {
+    this.saveConfig({ demoState: id });
+    this.renderDemoMini(id);
+  },
+
+  onLayoutChange(val) {
+    this.setSegActive('seg-layout', String(val));
+    this.setSegActive('seg-layout-center', String(val));
+    this.saveConfig({ layout: val });
+  },
+
+  onUnitsChange(val) { this.saveConfig({ units: val }); },
+  onGraphChange(val) { this.saveConfig({ graphWindow: parseInt(val) }); },
+
+  onThreshChange(key, val) {
+    const t = { ...this.config.thresholds, [key]: parseInt(val) };
+    this.saveConfig({ thresholds: t });
+  },
+
+  onSlotChange(idx, val) {
+    const slots = [...this.config.slots];
+    slots[idx] = parseInt(val);
+    this.saveConfig({ slots });
+  },
+
+  // ── Slots builder ─────────────────────────────────────────────────────────
+
+  buildSlots() {
+    const c = document.getElementById('slots-container');
+    if (!c) return;
+    c.innerHTML = [0,1,2,3].map(i => `
+      <div class="slot-row">
+        <span class="slot-id">Slot ${i}</span>
+        <select id="slot-${i}" onchange="App.onSlotChange(${i}, this.value)">
+          ${this.SLOT_TYPES.map(s => `<option value="${s.id}">${s.label}</option>`).join('')}
+        </select>
+      </div>`).join('');
+  },
+
+  // ── Demo state select + mini ──────────────────────────────────────────────
+
+  buildDemoStateSelect() {
+    const sel = document.getElementById('sel-demo-state');
+    if (!sel) return;
+    sel.innerHTML = this.DEMO_STATES.map(s =>
+      `<option value="${s.id}">[${s.id}] ${s.name} — ${s.glucose||'0'} ${this.TRENDS[s.trend]}</option>`
+    ).join('');
+  },
+
+  renderDemoMini(id) {
+    const el = document.getElementById('demo-mini');
+    if (!el) return;
+    const s = this.DEMO_STATES[id];
+    if (!s) return;
+    const cls = this.ZONE_CLS[s.zone];
+    el.innerHTML = `
+      <div class="demo-mini-val ${cls}">${s.glucose||'—'} <span style="font-size:14px">${this.TRENDS[s.trend]}</span></div>
+      <div class="demo-mini-meta">${s.name} · ${s.layout===1?'Dashboard':'Simple'} · ${s.temp!=null?s.temp+'°C ·':''} HR ${s.hr||'—'}</div>`;
+  },
+
+  // ── Center device select ──────────────────────────────────────────────────
+
+  buildCenterDeviceSelect() {
+    const sel = document.getElementById('sel-platform-center');
+    if (!sel) return;
+    sel.innerHTML = Object.entries(this.DEVICES).map(([val, d]) =>
+      `<option value="${val}">${d.short}</option>`
+    ).join('');
+  },
+
+  // ── Watch preview ─────────────────────────────────────────────────────────
+
+  renderWatchPreview() {
+    const c = this.config;
+    if (!c) return;
+    const dev     = this.DEVICES[c.platform] || this.DEVICES.emery;
+    const frame   = document.getElementById('watch-frame');
+    const content = document.getElementById('watch-content');
+    if (!frame || !content) return;
+
+    // Size and shape
+    frame.style.width        = dev.w + 'px';
+    frame.style.height       = dev.h + 'px';
+    frame.style.borderRadius = dev.shape === 'circle' ? '50%' : dev.r + 'px';
+    frame.style.zoom         = this.zoomed ? '1.5' : '1';
+
+    // Get data for rendering
+    const isDemo = c.demoMode;
+    const ds     = isDemo ? this.DEMO_STATES[c.demoState] : null;
+    const layout = c.layout;
+    const slots  = ds ? ds.slots : c.slots;
+    const zone   = ds ? ds.zone : 'ok';
+    const zcls   = this.ZONE_CLS[zone];
+
+    const glucose = ds ? (ds.glucose || 0) : 120;
+    const trend   = ds ? this.TRENDS[ds.trend] : '→';
+    const delta   = ds ? ds.delta : 0;
+    const temp    = ds?.temp;
+    const hr      = ds?.hr;
+    const steps   = ds?.steps;
+
+    // Scale helpers
+    const p = (px) => Math.round(px * dev.w / 200); // scale relative to emery width
+
+    // Slot content
+    const slotContent = (slotId, align = 'left') => {
+      const st = this.SLOT_TYPES[slotId];
+      if (!st || slotId === 0) return '';
+      let val = '', unit = '';
+      switch(slotId) {
+        case 1: val = '78'; unit = '%'; break; // Battery
+        case 2: val = temp != null ? temp : '12'; unit = '°'; break; // Weather
+        case 3: val = hr || '78'; unit = ''; break; // HR
+        case 4: val = steps ? (steps > 999 ? (steps/1000).toFixed(1)+'k' : steps) : '6.8k'; unit = ''; break; // Steps
+        case 5: val = glucose; unit = ''; break; // CGM
+      }
+      const fs  = p(11);
+      const fsu = p(8);
+      const ta  = align === 'right' ? 'right' : 'left';
+      const color = slotId === 5 ? `color:${this.zoneColor(zone)}` : 'color:#55ffff';
+      return `<div style="font-size:${fs}px;${color};font-weight:700;text-align:${ta};line-height:1.2">${val}<span style="font-size:${fsu}px;color:#aaffff;margin-left:1px">${unit}</span></div><div style="font-size:${p(7)}px;color:#004444;text-align:${ta}">${st.abbr}</div>`;
+    };
+
+    // Slot padding
+    const sp = p(8);
+
+    if (layout === 0) {
+      // ── Simple layout ────────────────────────────────────────────────────
+      const timeSize = p(64);
+      const timeColor = '#00ffff';
+
+      content.innerHTML = `
+        <div class="wf">
+          <div class="wf-slot tl" style="padding:${sp}px 0 0 ${sp}px">${slotContent(slots[0],'left')}</div>
+          <div class="wf-slot tr" style="padding:${sp}px ${sp}px 0 0">${slotContent(slots[1],'right')}</div>
+          <div class="wf-time-simple" style="line-height:1;text-align:center;">
+            <div style="font-size:${timeSize}px;font-weight:900;color:${timeColor};letter-spacing:-0.02em">12</div>
+            <div style="font-size:${timeSize}px;font-weight:900;color:${timeColor};letter-spacing:-0.02em;margin-top:-${p(6)}px">34</div>
+          </div>
+          <div class="wf-slot bl" style="padding:0 0 ${sp}px ${sp}px">${slotContent(slots[2],'left')}</div>
+          <div class="wf-slot br" style="padding:0 ${sp}px ${sp}px 0">${slotContent(slots[3],'right')}</div>
+        </div>`;
+
+    } else {
+      // ── Dashboard layout ─────────────────────────────────────────────────
+      const topH    = p(24);
+      const timeTop = topH + p(4);
+      const timeSz  = p(56);
+      const cgmTop  = timeTop + timeSz + p(6);
+      const graphH  = Math.round(dev.h * 0.35);
+      const cgmSz   = p(28);
+      const deltaTxt = delta >= 0 ? `+${delta}` : String(delta);
+
+      content.innerHTML = `
+        <div class="wf" style="overflow:hidden">
+          <!-- Top 3 slots -->
+          <div class="wf-top-row" style="height:${topH}px;padding:${p(4)}px ${sp}px 0">
+            ${slotContent(slots[0],'left')
+              ? `<div style="flex:1">${slotContent(slots[0],'left')}</div>` : '<div style="flex:1"></div>'}
+            ${slotContent(slots[1],'left')
+              ? `<div style="flex:0 0 auto;text-align:center">${slotContent(slots[1],'center')}</div>` : ''}
+            ${slotContent(slots[2],'right')
+              ? `<div style="flex:1;text-align:right">${slotContent(slots[2],'right')}</div>` : '<div style="flex:1"></div>'}
+          </div>
+          <!-- Time -->
+          <div class="wf-time-dash" style="top:${timeTop}px;font-size:${timeSz}px;font-weight:900;color:#00ffff;letter-spacing:-0.01em;white-space:nowrap">12:34</div>
+          <!-- CGM panel -->
+          <div class="wf-cgm-panel" style="top:${cgmTop}px">
+            <span style="font-size:${cgmSz}px;font-weight:800;${this.zoneColorStyle(zone)}">${glucose}</span>
+            <span style="font-size:${p(20)}px;font-weight:700;${this.zoneColorStyle(zone)};margin-left:${p(4)}px">${trend}</span>
+            <span style="font-size:${p(11)}px;color:#888;margin-left:${p(4)}px">${deltaTxt}</span>
+          </div>
+          <!-- Graph -->
+          <div class="wf-graph-area" style="height:${graphH}px">
+            ${this.renderGraphSVG(dev.w, graphH, zone)}
+          </div>
+        </div>`;
+    }
+  },
+
+  zoneColor(zone) {
+    return { urgent:'#ff4d4d', warning:'#ffaa00', ok:'#00ffaa', neutral:'#888', unknown:'#333' }[zone] || '#888';
+  },
+
+  zoneColorStyle(zone) { return `color:${this.zoneColor(zone)}`; },
+
+  renderGraphSVG(w, h, zone) {
+    const pts = [
+      [0,.7],[.08,.65],[.16,.6],[.25,.5],[.33,.45],[.42,.38],[.5,.42],
+      [.58,.35],[.67,.3],[.75,.28],[.83,.25],[.92,.2],[1,.18]
+    ].map(([x,y]) => [x*w, y*h]);
+    const d = pts.map(([x,y],i) => `${i===0?'M':'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+    const col = this.zoneColor(zone);
+    const bandY1 = h * 0.2, bandY2 = h * 0.65;
+    return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+      <rect x="0" y="${bandY1}" width="${w}" height="${bandY2-bandY1}" fill="rgba(0,80,40,.3)"/>
+      <path d="${d}" stroke="${col}" stroke-width="1.2" fill="none" opacity=".85"/>
+    </svg>`;
+  },
+
+  // ── Zoom ─────────────────────────────────────────────────────────────────
+
+  toggleZoom() {
+    this.zoomed = !this.zoomed;
+    const icon = document.getElementById('expand-icon');
+    if (icon) {
+      icon.innerHTML = this.zoomed
+        ? '<path d="M3 1H1v2M10 1h2v2M1 8v2h2M12 8v2h-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>'
+        : '<path d="M1 4V1h3M7 1h3v3M1 7v3h3M7 10h3V7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>';
+    }
+    this.renderWatchPreview();
+  },
+
+  // ── Cmd display ───────────────────────────────────────────────────────────
+
+  updateCmdDisplay() {
+    const c = this.config;
+    if (!c) return;
+    const el = document.getElementById('cmd-display');
+    if (!el) return;
+    let h = '';
+    if (c.demoMode) {
+      h += `<span class="cmd-env">DEMO_DATA</span>=<span class="cmd-num">1</span> `;
+      h += `<span class="cmd-env">DEMO_STATE</span>=<span class="cmd-num">${c.demoState}</span> `;
+    }
+    h += `<span class="cmd-key">pebble</span> build`;
+    h += ` <span class="cmd-env">&&</span> <span class="cmd-key">pebble</span> install <span class="cmd-arg">--emulator</span> ${c.platform}`;
+    el.innerHTML = h;
+  },
+
+  // ── Status dots ───────────────────────────────────────────────────────────
+
+  updateStatusDots() {
+    // Server dot
+    this.setDot('dot-server', this.connected ? 'ok' : 'err');
+    this.setDot('dot-server-hdr', this.connected ? 'ok' : 'err');
+
+    // Build dot: current config == lastBuilt?
+    if (!this.lastBuilt) {
+      this.setDot('dot-build', '');
+    } else {
+      const match = this.configsMatch(this.config, this.lastBuilt);
+      this.setDot('dot-build', match ? 'ok' : 'warn');
+    }
+
+    // Emulator dot: lastInstalled == lastBuilt?
+    if (!this.lastInstalled || !this.lastBuilt) {
+      this.setDot('dot-emulator', '');
+    } else {
+      const match = this.configsMatch(this.lastInstalled, this.lastBuilt);
+      this.setDot('dot-emulator', match ? 'ok' : 'warn');
+    }
+  },
+
+  configsMatch(a, b) {
+    if (!a || !b) return false;
+    const keys = ['platform','demoMode','demoState','layout'];
+    return keys.every(k => a[k] === b[k]) &&
+      JSON.stringify(a.slots) === JSON.stringify(b.slots);
+  },
+
+  setDot(id, state) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'dot' + (state ? ' ' + state : '');
+    if (id === 'dot-server-hdr') el.className = 'hdot' + (state ? ' ' + state : '');
+  },
+
+  // ── Panel toggle ──────────────────────────────────────────────────────────
+
+  togglePanel(side) {
+    const wrap = document.getElementById('wrap-' + side);
+    const btn  = document.getElementById('btn-' + side);
+    const open = wrap.classList.toggle('open');
+    btn.classList.toggle('open', open);
+  },
+
+  closePanel(side) {
+    document.getElementById('wrap-' + side).classList.remove('open');
+    document.getElementById('btn-' + side).classList.remove('open');
+  },
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+
+  doBuild()        { this.apiPost('/api/build'); },
+  doInstall()      { this.apiPost('/api/install'); },
+  doBuildInstall() { this.apiPost('/api/build-install'); },
+  doKill()         { this.apiPost('/api/kill'); },
+
+  setBuilding(val) {
+    this.building = val;
+    ['btn-bi','btn-b','btn-i'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.disabled = val;
+    });
+    ['btn-kill','btn-kill-bar'].forEach(id => {
+      const b = document.getElementById(id);
+      if (b) b.style.display = val ? 'inline-flex' : 'none';
+    });
+    const ind  = document.getElementById('build-ind');
+    if (!ind) return;
+    if (val) {
+      ind.className = 'build-ind running';
+      ind.innerHTML = '<div class="spinner"></div> Building…';
+    } else {
+      ind.className = 'build-ind idle';
+      ind.innerHTML = '<span id="build-ind-text">Idle</span>';
+    }
+  },
+
+  // ── SSE ───────────────────────────────────────────────────────────────────
+
+  connectSSE() {
+    if (this.sse) this.sse.close();
+    this.sse = new EventSource('/api/events');
+
+    this.sse.onopen = () => {
+      this.connected = true;
+      this.sseRetries = 0;
+      this.updateStatusDots();
+    };
+
+    this.sse.onerror = () => {
+      this.connected = false;
+      this.updateStatusDots();
+      this.sse.close();
+      this.sseRetries++;
+      setTimeout(() => this.connectSSE(), Math.min(500 * this.sseRetries, 6000));
+    };
+
+    this.sse.addEventListener('ping', e => {
+      const d = JSON.parse(e.data);
+      if (d.building) this.setBuilding(true);
+      if (d.lastBuilt)     { this.lastBuilt     = d.lastBuilt;     }
+      if (d.lastInstalled) { this.lastInstalled  = d.lastInstalled; }
+      this.updateStatusDots();
+    });
+
+    this.sse.addEventListener('clear',    () => { document.getElementById('term-out').innerHTML = ''; });
+    this.sse.addEventListener('cmd',      e  => this.appendTerm('t-cmd',    JSON.parse(e.data).text + '\n'));
+    this.sse.addEventListener('stdout',   e  => this.appendTerm('t-stdout', JSON.parse(e.data).text));
+    this.sse.addEventListener('stderr',   e  => this.appendTerm('t-stderr', JSON.parse(e.data).text));
+    this.sse.addEventListener('info',     e  => this.appendTerm('t-info',   JSON.parse(e.data).text));
+    this.sse.addEventListener('building', e  => this.setBuilding(JSON.parse(e.data).value));
+
+    this.sse.addEventListener('last_built', e => {
+      this.lastBuilt = JSON.parse(e.data);
+      this.updateStatusDots();
+    });
+    this.sse.addEventListener('last_installed', e => {
+      this.lastInstalled = JSON.parse(e.data);
+      this.updateStatusDots();
+    });
+
+    this.sse.addEventListener('done', e => {
+      const d = JSON.parse(e.data);
+      this.setBuilding(false);
+      const ind = document.getElementById('build-ind');
+      if (ind) {
+        if (d.success) {
+          ind.className = 'build-ind ok';
+          ind.innerHTML = '✓ Done';
+          this.appendTerm('t-success', '\n✓ Done\n');
+        } else if (d.code !== -1) {
+          ind.className = 'build-ind err';
+          ind.innerHTML = `✗ Failed (${d.code})`;
+          this.appendTerm('t-error', `\n✗ Exited with code ${d.code}\n`);
+        }
+        setTimeout(() => {
+          if (ind) { ind.className = 'build-ind idle'; ind.innerHTML = 'Idle'; }
+        }, 4000);
+      }
+    });
+  },
+
+  // ── Terminal ──────────────────────────────────────────────────────────────
+
+  appendTerm(cls, text) {
+    const out = document.getElementById('term-out');
+    const atBot = out.scrollHeight - out.scrollTop <= out.clientHeight + 30;
+    const s = document.createElement('span');
+    s.className = cls;
+    s.textContent = text;
+    out.appendChild(s);
+    if (atBot) out.scrollTop = out.scrollHeight;
+  },
+
+  clearTerminal() {
+    document.getElementById('term-out').innerHTML = '';
+    const ind = document.getElementById('build-ind');
+    if (ind) { ind.className = 'build-ind idle'; ind.innerHTML = 'Idle'; }
+  },
+
+  // ── Cheat sheet ───────────────────────────────────────────────────────────
+
+  buildCheatSheet() {
+    const el = document.getElementById('cheatsheet-body');
+    if (!el) return;
+
+    const sections = [
+      { title: 'Build', cmds: [
+        { raw:'pebble build',                               h:`<span class="ck">pebble</span> build`,                                                                              desc:'Release build' },
+        { raw:'DEMO_DATA=1 pebble build',                   h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ck">pebble</span> build`,                  desc:'Demo — cycles states' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=2 pebble build',      h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">2</span> <span class="ck">pebble</span> build`, desc:'Demo pinned to state 2' },
+      ]},
+      { title: 'Install', cmds: [
+        { raw:'pebble install --emulator emery',   h:`<span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`,   desc:'Time 2 (200×228)' },
+        { raw:'pebble install --emulator gabbro',  h:`<span class="ck">pebble</span> install <span class="ca">--emulator</span> gabbro`,  desc:'Round 2 (260×260)' },
+        { raw:'pebble install --emulator basalt',  h:`<span class="ck">pebble</span> install <span class="ca">--emulator</span> basalt`,  desc:'Time (144×168)' },
+        { raw:'pebble install --emulator diorite', h:`<span class="ck">pebble</span> install <span class="ca">--emulator</span> diorite`, desc:'Pebble 2 (144×168)' },
+        { raw:'pebble install --emulator chalk',   h:`<span class="ck">pebble</span> install <span class="ca">--emulator</span> chalk`,   desc:'Time Round (180×180)' },
+        { raw:'pebble install',                    h:`<span class="ck">pebble</span> install`,                                             desc:'Physical watch' },
+      ]},
+      { title: 'Build + Install', cmds: [
+        { raw:'pebble build && pebble install --emulator emery',                               h:`<span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`,                                                                       desc:'Release → Emery' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=2 pebble build && pebble install --emulator emery',     h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">2</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'State 2 → Emery' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=6 pebble build && pebble install --emulator emery',     h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">6</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Dashboard → Emery' },
+      ]},
+      { title: 'Demo States', cmds: this.DEMO_STATES.map(s => ({
+          raw: `DEMO_DATA=1 DEMO_STATE=${s.id} pebble build`,
+          h:   `<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">${s.id}</span> <span class="ck">pebble</span> build`,
+          desc:`${s.label} — ${s.glucose||0} ${this.TRENDS[s.trend]}`,
+        }))
+      },
+      { title: 'Layouts', cmds: [
+        { raw:'DEMO_DATA=1 DEMO_STATE=2 pebble build && pebble install --emulator emery', h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">2</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Simple (states 0–5,7)' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=6 pebble build && pebble install --emulator emery', h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">6</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Dashboard (state 6 only)' },
+      ]},
+      { title: 'Fake Data States', cmds: [
+        { raw:'DEMO_DATA=1 DEMO_STATE=0 pebble build && pebble install --emulator emery', h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">0</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Urgent low — 45 ↓↓' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=4 pebble build && pebble install --emulator emery', h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">4</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Urgent high — 270 ↑↑' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=5 pebble build && pebble install --emulator emery', h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">5</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Stale data (>30 min)' },
+        { raw:'DEMO_DATA=1 DEMO_STATE=7 pebble build && pebble install --emulator emery', h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ce">DEMO_STATE</span>=<span class="cn">7</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`, desc:'Zero state — no data' },
+        { raw:'DEMO_DATA=1 pebble build && pebble install --emulator emery',              h:`<span class="ce">DEMO_DATA</span>=<span class="cn">1</span> <span class="ck">pebble</span> build <span class="cc">&&</span> <span class="ck">pebble</span> install <span class="ca">--emulator</span> emery`,                                                                       desc:'Cycle all on button' },
+      ]},
+      { title: 'Slots (via demo.c)', cmds: [
+        { raw:'# States 0–5, 7:  Weather | Battery | CGM | HR', h:`<span class="cc"># States 0–5, 7 — slots: Weather | Battery | CGM | HR</span>`, desc:'' },
+        { raw:'# State 6 (dashboard): Weather | Battery | CGM | —', h:`<span class="cc"># State 6 — slots: Weather | Battery | CGM | —</span>`, desc:'' },
+        { raw:'# State 7 (zero_state): — | — | — | —', h:`<span class="cc"># State 7 — all slots: None</span>`, desc:'' },
+      ]},
+      { title: 'Screenshots', cmds: [
+        { raw:'./scripts/screenshot-sweep.sh',                       h:`<span class="ck">./scripts/screenshot-sweep.sh</span>`,                                                         desc:'All states × platforms' },
+        { raw:'PLATFORM=gabbro ./scripts/screenshot-sweep.sh',       h:`<span class="ce">PLATFORM</span>=gabbro <span class="ck">./scripts/screenshot-sweep.sh</span>`,               desc:'Gabbro only' },
+        { raw:'STATES="0 3 4" ./scripts/screenshot-sweep.sh',        h:`<span class="ce">STATES</span>=<span class="cn">"0 3 4"</span> <span class="ck">./scripts/screenshot-sweep.sh</span>`, desc:'Subset of states' },
+      ]},
+      { title: 'Emulator', cmds: [
+        { raw:'pebble logs',        h:`<span class="ck">pebble</span> logs`,        desc:'Stream app logs' },
+        { raw:'pebble kill',        h:`<span class="ck">pebble</span> kill`,        desc:'Kill emulator process' },
+        { raw:'pebble wipe',        h:`<span class="ck">pebble</span> wipe`,        desc:'Wipe emulator data' },
+        { raw:'pebble emu-control', h:`<span class="ck">pebble</span> emu-control`, desc:'Hardware controls UI' },
+      ]},
+    ];
+
+    el.innerHTML = sections.map(sec => `
+      <div class="cs-section">
+        <div class="cs-title">${sec.title}</div>
+        <div class="cs-list">
+          ${sec.cmds.map(cmd => `
+            <div class="cs-cmd">
+              <div class="cs-code">${cmd.h}</div>
+              <div class="cs-right">
+                ${cmd.desc ? `<span class="cs-desc">${cmd.desc}</span>` : ''}
+                <button class="btn btn-ghost btn-icon copy-btn" onclick="App.copy(this,${JSON.stringify(cmd.raw)})" title="Copy">
+                  <svg width="11" height="11" viewBox="0 0 14 14" fill="currentColor"><path d="M9 2H3a1 1 0 00-1 1v8a1 1 0 001 1h6a1 1 0 001-1V3a1 1 0 00-1-1zm0 9H3V3h6v8zM12 0H5v1.5h7V11H14V1a1 1 0 00-1-1z"/></svg>
+                </button>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+  },
+
+  async copy(btn, text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.classList.add('copied');
+      setTimeout(() => btn.classList.remove('copied'), 1400);
+    } catch {}
+  },
+
+};
+
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+</body>
+</html>

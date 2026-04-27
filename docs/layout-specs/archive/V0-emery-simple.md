@@ -1,0 +1,141 @@
+# Emery · Simple Layout Spec
+
+Platform: Emery (T2) — 200 × 228 px  
+Layout: `LAYOUT_SIMPLE`  
+Source: `src/c/main.c`, function `prv_layout_for_bounds()` — T2 / simple branch  
+Coordinates: origin top-left, y-axis downward. Match Figma 1:1.
+
+---
+
+## Coordinate & value conventions
+
+| Concept | Value |
+|---|---|
+| Canvas size | 200 × 228 px |
+| Coordinate origin | top-left (0, 0) |
+| Font size unit | cap-height px (equals Figma px) |
+| GColor format | `argb` byte — 2 bits/channel (00=0x00, 01=0x55, 10=0xAA, 11=0xFF) |
+| bg-color `transparent` | `GColorClear` |
+| bg-color `black` | `GColorBlack` (#000000) |
+
+---
+
+## Color tokens
+
+| Token alias | Hex | argb |
+|---|---|---|
+| `text/subtle` | #AAFFFF | 0xEF |
+| `text/inverted` | #FFFFFF | 0xFF |
+| `text/default` | #00FFFF | 0xCF |
+| `icon/default` | #55FFFF | 0xDF |
+| `icon/subtle` | #00AAAA | 0xCA |
+| `surface/border/subtle` | #005555 | 0xC5 |
+| `surface/bg/subtle` | #005555 | 0xC5 |
+| `state/danger` | #FF0000 | 0xF0 |
+| `state/warning` | #FFAA00 | 0xF8 |
+| `state/positive` | #00FFAA | 0xCE |
+| `state/inactive` | #AAAAAA | 0xEA |
+| `state/disabled` | #555555 | 0xD5 |
+
+---
+
+## Font resource IDs
+
+| Resource ID | Cap-height | Character set | Variable |
+|---|---|---|---|
+| `TIME_DIGITS_64` | 64 px | `[0-9:]` | `s_time_font` |
+| `DATA_VALUE_20` | 20 px | `[-0-9.k]` | `s_value_font` |
+| `DATA_UNIT_10` | 10 px | `[°CmgdLbp%stekou/l]` | `s_unit_font` |
+| `MATERIAL_SYMBOLS_16` | 16 px | filled glyphs | `s_symbol_font` |
+| `MATERIAL_SYMBOLS_REGULAR_16` | 16 px | outline glyphs | `s_symbol_font_regular` |
+| `FONT_KEY_GOTHIC_14` | 14 px | system font | — |
+
+---
+
+## Slot badges (slot_layer[0..3])
+
+Slot layers are custom-drawn (`slot_update_proc`). Corners: TL, TR, BL, BR. slot_layer[2] and [3] are hidden in compact (Quick View) mode.
+
+### Layer frames
+
+| Element | X | Y | W | H | source-file | line |
+|---|---|---|---|---|---|---|
+| slot_layer[0] (top-left) | 4 | 4 | 56 | 56 | `src/c/main.c` | 1177 |
+| slot_layer[1] (top-right) | 140 | 4 | 56 | 56 | `src/c/main.c` | 1178 |
+| slot_layer[2] (bottom-left) | 4 | 168 | 56 | 56 | `src/c/main.c` | 1179 |
+| slot_layer[3] (bottom-right) | 140 | 168 | 56 | 56 | `src/c/main.c` | 1180 |
+
+### Sub-elements (relative coords, all slots identical)
+
+| Sub-element | X | Y | W | H | font-size | font-resource-ID | text-color | bg-color | stroke-w | stroke-color | state-color-variants | source-file | line |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Arc track (background) | 3 | 4 | 50 | 50 | N/A | N/A | N/A | N/A | 6 | `surface/border/subtle` (#005555) when has data; `state/disabled` (#555555) when no data | N/A | `src/c/main.c` | 690–694 |
+| Arc fill (gauge) | 3 | 4 | 50 | 50 | N/A | N/A | N/A | N/A | 2 | icon_color (state-driven) | `state/positive` in-range; `state/warning` high/low; `state/danger` urgent | `src/c/main.c` | 732–735 |
+| Icon | 0 | 0 | 56 | 20 | 16 | `MATERIAL_SYMBOLS_16` (filled) / `MATERIAL_SYMBOLS_REGULAR_16` (outline) | icon_color (state-driven) | transparent | N/A | N/A | Same as arc fill | `src/c/main.c` | 745–748 |
+| Value | 5 | 16 | 46 | 20 | 20 | `DATA_VALUE_20` | `text/inverted` (#FFFFFF) + 2px black outline | transparent | N/A | N/A | N/A | `src/c/main.c` | 766–777 |
+| Unit | 0 | 36 | 56 | 14 | 10 | `DATA_UNIT_10` | `text/inverted` (#FFFFFF) + 1px black outline | transparent | N/A | N/A | N/A | `src/c/main.c` | 786–796 |
+
+---
+
+## Clock digits
+
+Simple layout uses `TIME_DIGITS_64` (64 px cap-height, `s_time_font`). Each digit has two layers: a **stroke layer** (outline, drawn first) and a **fill text layer** (drawn on top). The stroke layer is a custom `Layer` using `digit_stroke_update_proc`; the fill layer is a `TextLayer`.
+
+### Fill layers (TextLayer)
+
+| Element | X | Y | W | H | font-size | font-resource-ID | text-color | bg-color | stroke-w | stroke-color | state-color-variants | source-file | line |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| H1 fill (hour tens) | 53 | 58 | 48 | 70 | 64 | `TIME_DIGITS_64` | `text/subtle` (#AAFFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1196 |
+| H2 fill (hour units) | 99 | 58 | 48 | 70 | 64 | `TIME_DIGITS_64` | `text/inverted` (#FFFFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1197 |
+| M1 fill (minute tens) | 53 | 100 | 48 | 70 | 64 | `TIME_DIGITS_64` | `text/inverted` (#FFFFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1198 |
+| M2 fill (minute units) | 99 | 100 | 48 | 70 | 64 | `TIME_DIGITS_64` | `text/default` (#00FFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1199 |
+
+### Stroke layers (custom Layer, expanded ±4 px from fill frame)
+
+| Element | X | Y | W | H | font-size | font-resource-ID | text-color | bg-color | stroke-w | stroke-color | state-color-variants | source-file | line |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| H1 stroke | 49 | 54 | 56 | 78 | 64 | `TIME_DIGITS_64` | GColorBlack (outline) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1208 |
+| H2 stroke | 95 | 54 | 56 | 78 | 64 | `TIME_DIGITS_64` | GColorBlack (outline) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1210 |
+| M1 stroke | 49 | 96 | 56 | 78 | 64 | `TIME_DIGITS_64` | GColorBlack (outline) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1212 |
+| M2 stroke | 95 | 96 | 56 | 78 | 64 | `TIME_DIGITS_64` | GColorBlack (outline) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1214 |
+
+> Z-order per digit: stroke added first, fill added immediately after — so each digit's fill renders on top of its own outline. Digit order added: H1, H2, M1, M2.  
+> H1/H2 overlap: H2.x = H1.x + 46 (−2 px). M1/M2 same. Hour row (y=58) and minute row (y=100) overlap by −28 px.
+
+---
+
+## Status indicators
+
+| Element | X | Y | W | H | font-size | font-resource-ID | text-color | bg-color | stroke-w | stroke-color | state-color-variants | source-file | line |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Bluetooth icon | 92 | 4 | 16 | 16 | 16 | `MATERIAL_SYMBOLS_16` | `icon/default` (#55FFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1219 |
+| Day | 4 | 106 | 18 | 16 | 14 | `FONT_KEY_GOTHIC_14` | `text/subtle` (#AAFFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1223 |
+| Month | 178 | 106 | 18 | 16 | 14 | `FONT_KEY_GOTHIC_14` | `text/subtle` (#AAFFFF) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1227 |
+| Music icon | 92 | 208 | 16 | 16 | 16 | `MATERIAL_SYMBOLS_16` | `icon/subtle` (#00AAAA) | transparent | N/A | N/A | N/A | `src/c/main.c` | 1233 |
+
+> Day: right-aligned. Month: left-aligned. Music is always hidden (layer_set_hidden true); layer exists but does not render.
+
+---
+
+## Figma spec — fill in from Figma export
+
+Replace `?` values with your Figma measurements. Keep all other columns intact.
+
+| Element | Figma X | Figma Y | Figma W | Figma H | Notes |
+|---|---|---|---|---|---|
+| slot_layer[0] | ? | ? | ? | ? | |
+| slot_layer[1] | ? | ? | ? | ? | |
+| slot_layer[2] | ? | ? | ? | ? | |
+| slot_layer[3] | ? | ? | ? | ? | |
+| H1 fill | ? | ? | ? | ? | |
+| H2 fill | ? | ? | ? | ? | |
+| M1 fill | ? | ? | ? | ? | |
+| M2 fill | ? | ? | ? | ? | |
+| H1 stroke | ? | ? | ? | ? | Outer bounding box, expanded ±4 px |
+| H2 stroke | ? | ? | ? | ? | Outer bounding box, expanded ±4 px |
+| M1 stroke | ? | ? | ? | ? | Outer bounding box, expanded ±4 px |
+| M2 stroke | ? | ? | ? | ? | Outer bounding box, expanded ±4 px |
+| Bluetooth icon | ? | ? | ? | ? | |
+| Day | ? | ? | ? | ? | |
+| Month | ? | ? | ? | ? | |
+| Music icon | ? | ? | ? | ? | Always hidden — reference only |

@@ -1296,9 +1296,9 @@ void prv_layout_for_bounds(GRect bounds) {
       // BUG-01/02: slot 0 shifted right to x=8 (was 4), slot 2 shifted left to
       // x=136 (was 140) — gives 8px edge clearance, symmetric 8px gaps.
       GRect slot_frames[3] = {
-        GRect(8,   4, 56, 56),   // Left
+        GRect(4,   4, 56, 56),   // Left
         GRect(72,  4, 56, 56),   // Center
-        GRect(136, 4, 56, 56)    // Right
+        GRect(140, 4, 56, 56)    // Right
       };
       for (int i = 0; i < 3; i++) {
         if (s_slot_layer[i]) {
