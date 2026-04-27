@@ -12,16 +12,17 @@ Built for the Pebble Spring 2026 App Contest.
 
 **Prerequisites:** [Pebble SDK](https://developer.repebble.com/), `arm-none-eabi-gcc` (via `brew install --cask gcc-arm-embedded` on macOS)
 
-**Setup (macOS with direnv):**
-```bash
-cp .envrc.example .envrc
-direnv allow
-```
-
 **Build:**
 ```bash
-pebble build                    # Standard build
-DEMO_DATA=1 pebble build        # With QA demo data
+make build                      # Standard build
+make build-demo                 # With QA demo data
+make clean                      # Clean build artifacts
+```
+
+Or directly (requires `CC=arm-none-eabi-gcc` set):
+```bash
+pebble build
+DEMO_DATA=1 pebble build
 ```
 
 ---
