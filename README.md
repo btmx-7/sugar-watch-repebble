@@ -8,6 +8,24 @@ Built for the Pebble Spring 2026 App Contest.
 
 ---
 
+## Building
+
+**Prerequisites:** [Pebble SDK](https://developer.repebble.com/), `arm-none-eabi-gcc` (via `brew install --cask gcc-arm-embedded` on macOS)
+
+**Setup (macOS with direnv):**
+```bash
+cp .envrc.example .envrc
+direnv allow
+```
+
+**Build:**
+```bash
+pebble build                    # Standard build
+DEMO_DATA=1 pebble build        # With QA demo data
+```
+
+---
+
 ## Features
 
 - CGM integration (Nightscout and Dexcom Share supported out of the box)

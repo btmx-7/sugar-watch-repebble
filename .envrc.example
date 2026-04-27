@@ -1,0 +1,6 @@
+# Copy this file to .envrc to enable direnv support
+# This configures the build environment for Pebble SDK
+
+# Use ARM cross-compiler (required for pebble build on macOS with arm-none-eabi-gcc)
+export CC=arm-none-eabi-gcc
+export CXX=arm-none-eabi-g++

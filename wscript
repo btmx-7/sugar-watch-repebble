@@ -4,10 +4,6 @@ import os.path
 top = '.'
 out = 'build'
 
-# Use ARM cross-compiler for Pebble SDK on macOS to avoid clang detection issues
-os.environ.setdefault('CC', 'arm-none-eabi-gcc')
-os.environ.setdefault('CXX', 'arm-none-eabi-g++')
-
 def options(ctx):
     ctx.load('pebble_sdk')
 
