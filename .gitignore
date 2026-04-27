@@ -4,6 +4,10 @@ build/
 *.pbz
 .lock-waf_*
 
+# Python bytecode cache
+__pycache__/
+*.pyc
+
 # C build artifacts
 *.d
 *.o
@@ -54,3 +58,6 @@ resources/Material_Symbols_Outlined,Material_Symbols_Rounded,Material_Symbols_Sh
 
 # Archived
 resources/screenshots/archive
+
+#working file
+.obsidian

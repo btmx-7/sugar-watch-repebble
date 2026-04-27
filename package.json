@@ -46,9 +46,17 @@
       "media": [
         {
           "type": "font",
+          "name": "TIME_DIGITS_56",
+          "file": "fonts/Inter_18pt-Black.ttf",
+          "characterRegex": "[0-9:]",
+          "trackingAdjust": -2,
+          "size": 56
+        },
+        {
+          "type": "font",
           "name": "TIME_DIGITS_64",
           "file": "fonts/Inter_18pt-Black.ttf",
-          "characterRegex": "[0-9]",
+          "characterRegex": "[0-9:]",
           "trackingAdjust": -2,
           "size": 64
         },
